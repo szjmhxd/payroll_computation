@@ -14,8 +14,21 @@ const elements = {
     skipWeekend: document.getElementById('skipWeekend'),
     payDay: document.getElementById('payDay'),
     saveBtn: document.getElementById('saveBtn'),
-    resetBtn: document.getElementById('resetBtn')
+    resetBtn: document.getElementById('resetBtn'),
+    // 显示元素
+    todayAmount: document.getElementById('todayAmount'),
+    progressBar: document.getElementById('progressBar'),
+    progressPercent: document.getElementById('progressPercent'),
+    countdown: document.getElementById('countdown'),
+    statusBadge: document.getElementById('statusBadge'),
+    monthEarned: document.getElementById('monthEarned'),
+    hourlyRate: document.getElementById('hourlyRate'),
+    perSecond: document.getElementById('perSecond'),
+    paydayCountdown: document.getElementById('paydayCountdown')
 };
+
+// 定时器ID
+let updateTimer = null;
 
 // 默认设置
 const defaultSettings = {
@@ -185,6 +198,252 @@ function resetSettings() {
     }
 }
 
+// ============ 薪资计算核心逻辑 ============
+
+// 获取当前设置
+function getCurrentSettings() {
+    return {
+        monthlySalary: parseFloat(elements.monthlySalary.value) || 0,
+        workStartTime: elements.workStartTime.value,
+        workEndTime: elements.workEndTime.value,
+        lunchStartTime: elements.lunchStartTime.value,
+        lunchEndTime: elements.lunchEndTime.value,
+        lunchDuration: parseInt(elements.lunchDuration.value) || 0,
+        lunchIncluded: elements.lunchIncluded.checked,
+        isDoubleRest: elements.isDoubleRest.checked,
+        skipHoliday: elements.skipHoliday.checked,
+        skipWeekend: elements.skipWeekend.checked,
+        payDay: parseInt(elements.payDay.value) || 15
+    };
+}
+
+// 计算月工作日天数
+function getMonthWorkDays(isDoubleRest) {
+    // 简化计算：双休约21.75天，单休约25.75天
+    return isDoubleRest ? 21.75 : 25.75;
+}
+
+// 计算日工作时长（秒）
+function getDailyWorkSeconds(settings) {
+    const startMinutes = timeToMinutes(settings.workStartTime);
+    const endMinutes = timeToMinutes(settings.workEndTime);
+    let workMinutes = endMinutes - startMinutes;
+
+    // 如果午休不计入薪资，减去午休时长
+    if (!settings.lunchIncluded) {
+        workMinutes -= settings.lunchDuration;
+    }
+
+    return workMinutes * 60; // 转换为秒
+}
+
+// 计算每秒薪资
+function getPerSecondSalary(settings) {
+    const monthWorkDays = getMonthWorkDays(settings.isDoubleRest);
+    const dailyWorkSeconds = getDailyWorkSeconds(settings);
+
+    if (dailyWorkSeconds <= 0) return 0;
+
+    // 每秒薪资 = 月薪 / 月工作日 / 日工作时长
+    return settings.monthlySalary / monthWorkDays / dailyWorkSeconds;
+}
+
+// 计算今日已工作秒数
+function getTodayWorkedSeconds(settings) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const workStartMinutes = timeToMinutes(settings.workStartTime);
+    const workEndMinutes = timeToMinutes(settings.workEndTime);
+    const lunchStartMinutes = timeToMinutes(settings.lunchStartTime);
+    const lunchEndMinutes = timeToMinutes(settings.lunchEndTime);
+
+    // 如果还没到上班时间
+    if (currentMinutes < workStartMinutes) {
+        return 0;
+    }
+
+    // 如果已经下班
+    if (currentMinutes >= workEndMinutes) {
+        return getDailyWorkSeconds(settings);
+    }
+
+    // 计算已工作分钟数
+    let workedMinutes = currentMinutes - workStartMinutes;
+
+    // 如果午休不计入薪资，减去午休时间
+    if (!settings.lunchIncluded) {
+        // 如果当前在午休时间内
+        if (currentMinutes >= lunchStartMinutes && currentMinutes < lunchEndMinutes) {
+            workedMinutes = lunchStartMinutes - workStartMinutes;
+        }
+        // 如果当前在午休结束后
+        else if (currentMinutes >= lunchEndMinutes) {
+            workedMinutes = workedMinutes - settings.lunchDuration;
+        }
+    }
+
+    return Math.max(0, workedMinutes * 60);
+}
+
+// 判断是否是工作日（简化版：跳过周末）
+function isWorkDay(settings) {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=周日, 6=周六
+
+    // 如果跳过周末
+    if (settings.skipWeekend) {
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            return false;
+        }
+    }
+
+    // 跳过节假日暂时不实现（需要网络日历）
+    // if (settings.skipHoliday) { ... }
+
+    return true;
+}
+
+// 计算距离下班的倒计时
+function getCountdown(settings) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentSeconds = now.getSeconds();
+    const workEndMinutes = timeToMinutes(settings.workEndTime);
+
+    // 如果已经下班
+    if (currentMinutes >= workEndMinutes) {
+        return { hours: 0, minutes: 0, seconds: 0, total: 0 };
+    }
+
+    // 计算剩余秒数
+    const remainingMinutes = workEndMinutes - currentMinutes;
+    const remainingSeconds = remainingMinutes * 60 - currentSeconds;
+
+    const hours = Math.floor(remainingSeconds / 3600);
+    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+    const seconds = remainingSeconds % 60;
+
+    return { hours, minutes, seconds, total: remainingSeconds };
+}
+
+// 计算距离发薪日的天数
+function getPaydayCountdown(payDay) {
+    const now = new Date();
+    const currentDay = now.getDate();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // 本月发薪日
+    let paydayDate = new Date(currentYear, currentMonth, payDay);
+
+    // 如果本月发薪日已过，计算下个月的
+    if (currentDay >= payDay) {
+        paydayDate = new Date(currentYear, currentMonth + 1, payDay);
+    }
+
+    // 计算天数差
+    const diffTime = paydayDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
+}
+
+// 计算今日进度百分比
+function getTodayProgress(settings) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const workStartMinutes = timeToMinutes(settings.workStartTime);
+    const workEndMinutes = timeToMinutes(settings.workEndTime);
+
+    // 如果还没到上班时间
+    if (currentMinutes < workStartMinutes) {
+        return 0;
+    }
+
+    // 如果已经下班
+    if (currentMinutes >= workEndMinutes) {
+        return 100;
+    }
+
+    // 计算进度
+    const totalWorkMinutes = workEndMinutes - workStartMinutes;
+    const workedMinutes = currentMinutes - workStartMinutes;
+
+    return Math.min(100, Math.round((workedMinutes / totalWorkMinutes) * 100));
+}
+
+// ============ 显示更新 ============
+
+// 更新今日薪资显示
+function updateTodayDisplay() {
+    const settings = getCurrentSettings();
+    const isWork = isWorkDay(settings);
+
+    // 如果不是工作日，显示休息状态
+    if (!isWork) {
+        elements.statusBadge.textContent = '  休息日';
+        elements.todayAmount.textContent = '¥0.00';
+        elements.progressBar.style.width = '0%';
+        elements.progressPercent.textContent = '0%';
+        elements.countdown.textContent = '休息日';
+        return;
+    }
+
+    elements.statusBadge.textContent = '  搬砖中';
+
+    // 计算今日已赚
+    const perSecond = getPerSecondSalary(settings);
+    const workedSeconds = getTodayWorkedSeconds(settings);
+    const todayEarned = perSecond * workedSeconds;
+
+    // 更新今日已赚金额
+    elements.todayAmount.textContent = `¥${todayEarned.toFixed(2)}`;
+
+    // 更新进度条
+    const progress = getTodayProgress(settings);
+    elements.progressBar.style.width = `${progress}%`;
+    elements.progressPercent.textContent = `${progress}%`;
+
+    // 更新倒计时
+    const countdown = getCountdown(settings);
+    if (countdown.total > 0) {
+        elements.countdown.textContent =
+            `${String(countdown.hours).padStart(2, '0')}:${String(countdown.minutes).padStart(2, '0')}:${String(countdown.seconds).padStart(2, '0')}`;
+    } else {
+        elements.countdown.textContent = '已下班';
+    }
+
+    // 更新统计卡片
+    const monthWorkDays = getMonthWorkDays(settings.isDoubleRest);
+    const monthlyEarned = todayEarned; // 简化：只计算今日
+    const hourlySalary = perSecond * 3600;
+
+    elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(0)}`;
+    elements.hourlyRate.textContent = `¥${hourlySalary.toFixed(1)}/h`;
+    elements.perSecond.textContent = `¥${perSecond.toFixed(4)}`;
+
+    // 更新发薪日倒计时
+    const paydayDays = getPaydayCountdown(settings.payDay);
+    elements.paydayCountdown.textContent = `${paydayDays} 天`;
+}
+
+// 启动定时更新
+function startAutoUpdate() {
+    // 立即更新一次
+    updateTodayDisplay();
+
+    // 每秒更新
+    updateTimer = setInterval(updateTodayDisplay, 1000);
+}
+
+// 停止定时更新
+function stopAutoUpdate() {
+    if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+    }
+}
+
 // 初始化
 function init() {
     initTimePickers();
@@ -194,6 +453,29 @@ function init() {
     // 绑定按钮事件
     elements.saveBtn.addEventListener('click', saveSettings);
     elements.resetBtn.addEventListener('click', resetSettings);
+
+    // 监听设置变更，实时更新显示
+    const inputs = [
+        elements.monthlySalary,
+        elements.workStartTime,
+        elements.workEndTime,
+        elements.lunchStartTime,
+        elements.lunchEndTime,
+        elements.lunchDuration,
+        elements.lunchIncluded,
+        elements.isDoubleRest,
+        elements.skipHoliday,
+        elements.skipWeekend,
+        elements.payDay
+    ];
+
+    inputs.forEach(input => {
+        const eventType = input.type === 'checkbox' || input.type === 'number' ? 'change' : 'change';
+        input.addEventListener(eventType, updateTodayDisplay);
+    });
+
+    // 启动自动更新
+    startAutoUpdate();
 }
 
 // 页面加载完成后初始化

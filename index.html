@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摸鱼薪资计算器</title>
+    <!-- Flatpickr 时间选择器 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 页面标题 -->
+        <header class="header">
+            <h1> 摸鱼薪资计算器</h1>
+            <p class="subtitle">上班每一秒都在赚钱，今日已赚 / 实时时薪 / 下班倒计时</p>
+        </header>
+
+        <!-- 今日薪资显示区域 -->
+        <section class="today-salary card">
+            <div class="status-badge" id="statusBadge">  摸鱼中</div>
+            <div class="today-label">今日已赚</div>
+            <div class="today-amount" id="todayAmount">¥0.00</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-info">
+                <span>今日进度 <span id="progressPercent">0%</span></span>
+                <span>距离下班 <span id="countdown">00:00:00</span></span>
+            </div>
+        </section>
+
+        <!-- 统计卡片 -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"> </div>
+                <div class="stat-label">本月已赚</div>
+                <div class="stat-value" id="monthEarned">¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-label">实时时薪</div>
+                <div class="stat-value" id="hourlyRate">¥0/h</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"> </div>
+                <div class="stat-label">每秒进账</div>
+                <div class="stat-value" id="perSecond">¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"> </div>
+                <div class="stat-label">距离发薪</div>
+                <div class="stat-value" id="paydayCountdown">0 天</div>
+            </div>
+        </section>
+
+        <!-- 薪资设置 -->
+        <section class="settings card">
+            <h2>  我的薪资与作息</h2>
+            <div class="settings-grid">
+                <!-- 税后月薪 -->
+                <div class="form-group">
+                    <label>税后月薪（元）</label>
+                    <input type="number" id="monthlySalary" value="15000" min="0" step="100">
+                </div>
+
+                <!-- 上班时间 -->
+                <div class="form-group">
+                    <label>上班时间</label>
+                    <input type="text" id="workStartTime" class="timepicker" value="09:00">
+                </div>
+
+                <!-- 下班时间 -->
+                <div class="form-group">
+                    <label>下班时间</label>
+                    <input type="text" id="workEndTime" class="timepicker" value="18:00">
+                </div>
+
+                <!-- 午休开始时间 -->
+                <div class="form-group">
+                    <label>午休开始</label>
+                    <input type="text" id="lunchStartTime" class="timepicker" value="12:00">
+                </div>
+
+                <!-- 午休结束时间 -->
+                <div class="form-group">
+                    <label>午休结束</label>
+                    <input type="text" id="lunchEndTime" class="timepicker" value="13:00">
+                </div>
+
+                <!-- 午休时长 -->
+                <div class="form-group">
+                    <label>午休时长（分钟）</label>
+                    <input type="number" id="lunchDuration" value="60" min="0" max="480" step="5">
+                </div>
+            </div>
+
+            <!-- 开关选项 -->
+            <div class="switch-group">
+                <label class="switch-label">
+                    <span>午休时间计入薪资</span>
+                    <input type="checkbox" id="lunchIncluded" checked>
+                    <span class="switch"></span>
+                </label>
+                <label class="switch-label">
+                    <span>双休</span>
+                    <input type="checkbox" id="isDoubleRest" checked>
+                    <span class="switch"></span>
+                </label>
+            </div>
+
+            <!-- 跳过规则 -->
+            <div class="skip-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="skipHoliday" checked>
+                    <span>跳过节假日</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="skipWeekend" checked>
+                    <span>跳过周末</span>
+                </label>
+            </div>
+
+            <!-- 发薪日 -->
+            <div class="payday-group">
+                <label>发薪日（每月）</label>
+                <div class="payday-input">
+                    <input type="number" id="payDay" value="15" min="1" max="31">
+                    <span>号</span>
+                </div>
+            </div>
+
+            <!-- 按钮 -->
+            <div class="button-group">
+                <button class="btn btn-primary" id="saveBtn">  保存设置</button>
+                <button class="btn btn-secondary" id="resetBtn">🔄 重置</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

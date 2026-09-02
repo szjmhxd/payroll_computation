@@ -372,6 +372,48 @@ function getTodayProgress(settings) {
     return Math.min(100, Math.round((workedMinutes / totalWorkMinutes) * 100));
 }
 
+// 计算本月已过的工作日天数（不包括今天）
+function getMonthPassedWorkDays(settings) {
+    const now = new Date();
+    const currentDay = now.getDate(); // 今天几号
+    const dayOfWeek = now.getDay(); // 今天星期几
+
+    let workDays = 0;
+
+    // 遍历本月1号到昨天
+    for (let day = 1; day < currentDay; day++) {
+        const date = new Date(now.getFullYear(), now.getMonth(), day);
+        const weekDay = date.getDay();
+
+        // 如果跳过周末
+        if (settings.skipWeekend) {
+            if (weekDay === 0 || weekDay === 6) {
+                continue;
+            }
+        }
+
+        workDays++;
+    }
+
+    return workDays;
+}
+
+// 计算本月已赚薪资
+function getMonthEarned(settings) {
+    const perSecond = getPerSecondSalary(settings);
+    const dailyWorkSeconds = getDailyWorkSeconds(settings);
+
+    // 本月已过工作日的薪资
+    const passedWorkDays = getMonthPassedWorkDays(settings);
+    const passedDaysSalary = passedWorkDays * perSecond * dailyWorkSeconds;
+
+    // 今日已赚
+    const workedSeconds = getTodayWorkedSeconds(settings);
+    const todayEarned = perSecond * workedSeconds;
+
+    return passedDaysSalary + todayEarned;
+}
+
 // ============ 显示更新 ============
 
 // 更新今日薪资显示
@@ -414,8 +456,7 @@ function updateTodayDisplay() {
     }
 
     // 更新统计卡片
-    const monthWorkDays = getMonthWorkDays(settings.isDoubleRest);
-    const monthlyEarned = todayEarned; // 简化：只计算今日
+    const monthlyEarned = getMonthEarned(settings);
     const hourlySalary = perSecond * 3600;
 
     elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(0)}`;

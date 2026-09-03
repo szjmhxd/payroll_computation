@@ -242,11 +242,14 @@ const elements = {
     hourlyRate: document.getElementById('hourlyRate'),
     perMinute: document.getElementById('perMinute'),
     paydayCountdown: document.getElementById('paydayCountdown'),
+    paydayWorkdays: document.getElementById('paydayWorkdays'),
     paydayHint: document.getElementById('paydayHint'),
     // 日期信息
     dateText: document.getElementById('dateText'),
     yearWorkDay: document.getElementById('yearWorkDay'),
+    yearWorkDayTotal: document.getElementById('yearWorkDayTotal'),
     monthWorkDay: document.getElementById('monthWorkDay'),
+    monthWorkDayTotal: document.getElementById('monthWorkDayTotal'),
     // 赚钱速度换算
     coffeeTime: document.getElementById('coffeeTime'),
     lunchTime: document.getElementById('lunchTime'),
@@ -461,6 +464,59 @@ function getTodayDateInfo() {
     };
 }
 
+// 计算今年总工作日天数
+function getYearTotalWorkDays(settings) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const lastDay = new Date(year, 11, 31); // 12月31日
+
+    let workDays = 0;
+    const startDate = new Date(year, 0, 1); // 1月1日
+
+    for (let d = new Date(startDate); d <= lastDay; d.setDate(d.getDate() + 1)) {
+        if (isWorkDayForDate(d, settings)) {
+            workDays++;
+        }
+    }
+
+    return workDays;
+}
+
+// 计算本月总工作日天数
+function getMonthTotalWorkDays(settings) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const lastDay = new Date(year, month + 1, 0); // 本月最后一天
+
+    let workDays = 0;
+    const startDate = new Date(year, month, 1); // 本月1号
+
+    for (let d = new Date(startDate); d <= lastDay; d.setDate(d.getDate() + 1)) {
+        if (isWorkDayForDate(d, settings)) {
+            workDays++;
+        }
+    }
+
+    return workDays;
+}
+
+// 计算两个日期之间的工作日天数（不包括起始日，包括结束日）
+function getWorkDaysBetween(startDate, endDate, settings) {
+    let workDays = 0;
+    const current = new Date(startDate);
+    current.setDate(current.getDate() + 1); // 从下一天开始
+
+    while (current <= endDate) {
+        if (isWorkDayForDate(current, settings)) {
+            workDays++;
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    return workDays;
+}
+
 // 计算今年已过的工作日天数（不包括今天）
 function getYearPassedWorkDays(settings) {
     const now = new Date();
@@ -652,8 +708,9 @@ function getCountdown(settings) {
     return { hours, minutes, seconds, total: remainingSeconds };
 }
 
-// 计算发薪日信息（天数 + 周几提示）
+// 计算发薪日信息（自然日 + 工作日 + 周几提示）
 function getPaydayInfo(payDay) {
+    const settings = getCurrentSettings();
     const now = new Date();
     const currentDay = now.getDate();
     const currentMonth = now.getMonth();
@@ -669,9 +726,12 @@ function getPaydayInfo(payDay) {
         isThisMonth = false;
     }
 
-    // 计算天数差
+    // 计算自然日天数差
     const diffTime = paydayDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // 计算工作日天数
+    const workDays = getWorkDaysBetween(now, paydayDate, settings);
 
     // 获取发薪日是周几
     const weekday = getWeekdayFromDate(paydayDate);
@@ -691,7 +751,7 @@ function getPaydayInfo(payDay) {
         }
     }
 
-    return { days: diffDays, hint };
+    return { days: diffDays, workDays, hint };
 }
 
 // 计算今日进度百分比（精确到秒）
@@ -747,9 +807,14 @@ function updateTodayDisplay() {
 
     // 计算工作日（包括今天）
     const yearWorkDays = getYearPassedWorkDays(settings) + (isWork ? 1 : 0);
+    const yearWorkDaysTotal = getYearTotalWorkDays(settings);
     const monthWorkDays = getMonthPassedWorkDays(settings) + (isWork ? 1 : 0);
+    const monthWorkDaysTotal = getMonthTotalWorkDays(settings);
+
     elements.yearWorkDay.textContent = yearWorkDays;
+    elements.yearWorkDayTotal.textContent = yearWorkDaysTotal;
     elements.monthWorkDay.textContent = monthWorkDays;
+    elements.monthWorkDayTotal.textContent = monthWorkDaysTotal;
 
     // 如果不是工作日，显示休息状态
     if (!isWork) {
@@ -798,7 +863,8 @@ function updateTodayDisplay() {
 
     // 更新发薪日倒计时和提示
     const paydayInfo = getPaydayInfo(settings.payDay);
-    elements.paydayCountdown.textContent = `${paydayInfo.days} 天`;
+    elements.paydayCountdown.textContent = `${paydayInfo.days} 自然日`;
+    elements.paydayWorkdays.textContent = `${paydayInfo.workDays} 工作日`;
     elements.paydayHint.textContent = paydayInfo.hint;
 
     // 更新赚钱速度换算

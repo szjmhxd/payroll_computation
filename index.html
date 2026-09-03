@@ -23,9 +23,9 @@
             <div class="date-info">
                 <span id="dateText">2026年09月02日 星期三</span>
                 <span class="date-separator">|</span>
-                <span>今年第 <span id="yearWorkDay">0</span> 个工作日</span>
+                <span>今年第 <span id="yearWorkDay">0</span>/<span id="yearWorkDayTotal">0</span> 个工作日</span>
                 <span class="date-separator">|</span>
-                <span>本月第 <span id="monthWorkDay">0</span> 个工作日</span>
+                <span>本月第 <span id="monthWorkDay">0</span>/<span id="monthWorkDayTotal">0</span> 个工作日</span>
             </div>
             <div class="status-badge" id="statusBadge">  摸鱼中</div>
             <div class="today-label">今日已赚 / 每日薪资</div>
@@ -59,7 +59,8 @@
             <div class="stat-card">
                 <div class="stat-icon"> </div>
                 <div class="stat-label">距离发薪</div>
-                <div class="stat-value" id="paydayCountdown">0 天</div>
+                <div class="stat-value" id="paydayCountdown">0 自然日</div>
+                <div class="stat-hint" id="paydayWorkdays">0 工作日</div>
                 <div class="stat-hint" id="paydayHint"></div>
             </div>
         </section>

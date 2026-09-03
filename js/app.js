@@ -239,6 +239,7 @@ const elements = {
     countdown: document.getElementById('countdown'),
     statusBadge: document.getElementById('statusBadge'),
     monthEarned: document.getElementById('monthEarned'),
+    dailySalary: document.getElementById('dailySalary'),
     hourlyRate: document.getElementById('hourlyRate'),
     perSecond: document.getElementById('perSecond'),
     paydayCountdown: document.getElementById('paydayCountdown')
@@ -679,12 +680,12 @@ function updateTodayDisplay() {
     // 更新今日已赚金额
     elements.todayAmount.textContent = `¥${todayEarned.toFixed(2)}`;
 
-    // 更新进度条
+    // 更新进度条（三位小数）
     const progress = getTodayProgress(settings);
     elements.progressBar.style.width = `${progress}%`;
-    elements.progressPercent.textContent = `${progress}%`;
+    elements.progressPercent.textContent = `${progress.toFixed(3)}%`;
 
-    // 更新倒计时
+    // 更新倒计时（实时跳动）
     const countdown = getCountdown(settings);
     if (countdown.total > 0) {
         elements.countdown.textContent =
@@ -695,10 +696,13 @@ function updateTodayDisplay() {
 
     // 更新统计卡片
     const monthlyEarned = getMonthEarned(settings);
+    const dailyWorkSeconds = getDailyWorkSeconds(settings);
+    const dailySalary = perSecond * dailyWorkSeconds;
     const hourlySalary = perSecond * 3600;
 
-    elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(0)}`;
-    elements.hourlyRate.textContent = `¥${hourlySalary.toFixed(1)}/h`;
+    elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(2)}`;
+    elements.dailySalary.textContent = `¥${dailySalary.toFixed(2)}`;
+    elements.hourlyRate.textContent = `¥${hourlySalary.toFixed(2)}/h`;
     elements.perSecond.textContent = `¥${perSecond.toFixed(4)}`;
 
     // 更新发薪日倒计时

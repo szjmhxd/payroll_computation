@@ -385,19 +385,13 @@ function resetSettings() {
 
 // 获取当前设置
 function getCurrentSettings() {
-    return {
-        monthlySalary: parseFloat(elements.monthlySalary.value) || 0,
-        workStartTime: elements.workStartTime.value,
-        workEndTime: elements.workEndTime.value,
-        lunchStartTime: elements.lunchStartTime.value,
-        lunchEndTime: elements.lunchEndTime.value,
-        lunchDuration: parseInt(elements.lunchDuration.value) || 0,
-        lunchIncluded: elements.lunchIncluded.checked,
-        isDoubleRest: elements.isDoubleRest.checked,
-        skipHoliday: elements.skipHoliday.checked,
-        skipWeekend: elements.skipWeekend.checked,
-        payDay: parseInt(elements.payDay.value) || 15
-    };
+    // 从localStorage读取，不从输入框读取
+    const saved = localStorage.getItem('touchFishPaySettings');
+    if (saved) {
+        return JSON.parse(saved);
+    }
+    // 如果没有保存过，返回默认值
+    return { ...defaultSettings };
 }
 
 // 星期几的中文名称
@@ -984,37 +978,10 @@ function setSpeedDisplay(coffeeWorkday, coffeeCalendar, lunchWorkday, lunchCalen
     elements.carCalendar.textContent = carCalendar;
 }
 
-// 启动自动更新（只更新时间显示，不更新薪资计算）
+// 启动自动更新（从localStorage读取数据，实时更新薪资显示）
 function startAutoUpdate() {
-    // 每秒只更新时间相关显示（下班倒计时等）
-    updateTimer = setInterval(updateTimeOnly, 1000);
-}
-
-// 只更新时间显示（不重新计算薪资）
-function updateTimeOnly() {
-    const settings = getCurrentSettings();
-    
-    // 更新状态
-    updateStatus();
-    
-    // 更新下班倒计时
-    const now = new Date();
-    const endTime = parseTime(settings.workEndTime);
-    const endDateTime = new Date(now);
-    endDateTime.setHours(endTime.hours, endTime.minutes, 0, 0);
-    
-    // 如果已过下班时间，显示0
-    if (now >= endDateTime) {
-        elements.countdown.textContent = '00:00:00';
-        elements.progressPercent.textContent = '100.000%';
-        elements.progressBar.style.width = '100%';
-    } else {
-        const diff = endDateTime - now;
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        elements.countdown.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
+    // 每秒更新
+    updateTimer = setInterval(updateTodayDisplay, 1000);
 }
 
 // 停止定时更新

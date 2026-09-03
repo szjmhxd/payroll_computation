@@ -570,38 +570,39 @@ function getPerSecondSalary(settings) {
 // 计算今日已工作秒数
 function getTodayWorkedSeconds(settings) {
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const workStartMinutes = timeToMinutes(settings.workStartTime);
-    const workEndMinutes = timeToMinutes(settings.workEndTime);
-    const lunchStartMinutes = timeToMinutes(settings.lunchStartTime);
-    const lunchEndMinutes = timeToMinutes(settings.lunchEndTime);
+    // 使用秒级精度计算
+    const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const workStartSeconds = timeToMinutes(settings.workStartTime) * 60;
+    const workEndSeconds = timeToMinutes(settings.workEndTime) * 60;
+    const lunchStartSeconds = timeToMinutes(settings.lunchStartTime) * 60;
+    const lunchEndSeconds = timeToMinutes(settings.lunchEndTime) * 60;
 
     // 如果还没到上班时间
-    if (currentMinutes < workStartMinutes) {
+    if (currentSeconds < workStartSeconds) {
         return 0;
     }
 
     // 如果已经下班
-    if (currentMinutes >= workEndMinutes) {
+    if (currentSeconds >= workEndSeconds) {
         return getDailyWorkSeconds(settings);
     }
 
-    // 计算已工作分钟数
-    let workedMinutes = currentMinutes - workStartMinutes;
+    // 计算已工作秒数
+    let workedSeconds = currentSeconds - workStartSeconds;
 
     // 如果午休不计入薪资，减去午休时间
     if (!settings.lunchIncluded) {
         // 如果当前在午休时间内
-        if (currentMinutes >= lunchStartMinutes && currentMinutes < lunchEndMinutes) {
-            workedMinutes = lunchStartMinutes - workStartMinutes;
+        if (currentSeconds >= lunchStartSeconds && currentSeconds < lunchEndSeconds) {
+            workedSeconds = lunchStartSeconds - workStartSeconds;
         }
         // 如果当前在午休结束后
-        else if (currentMinutes >= lunchEndMinutes) {
-            workedMinutes = workedMinutes - settings.lunchDuration;
+        else if (currentSeconds >= lunchEndSeconds) {
+            workedSeconds = currentSeconds - workStartSeconds - (lunchEndSeconds - lunchStartSeconds);
         }
     }
 
-    return Math.max(0, workedMinutes * 60);
+    return workedSeconds;
 }
 
 // 判断是否是工作日

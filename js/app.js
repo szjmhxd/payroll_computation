@@ -2,14 +2,9 @@
 
 // ============ 节假日数据管理 ============
 
-// 节假日数据缓存
-const holidayCache = {
-    data: {},        // { 2026: {...}, 2027: {...} }
-    lastUpdate: null // 上次更新明年数据的时间戳
-};
-
 // localStorage 键名
-const HOLIDAY_CACHE_KEY = 'touchFishHolidayCache';
+const HOLIDAY_DATA_KEY = 'touchFishHolidayData';
+const HOLIDAY_UPDATE_TIME_KEY = 'touchFishHolidayUpdateTime';
 
 // 获取日期字符串 (YYYY-MM-DD)
 function formatDate(date) {
@@ -19,18 +14,44 @@ function formatDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-// 加载本地节假日数据
-async function loadLocalHolidayData(year) {
-    try {
-        const response = await fetch(`data/${year}.json`);
-        if (response.ok) {
-            return await response.json();
+// 从 localStorage 获取所有节假日数据
+function getAllHolidayData() {
+    const saved = localStorage.getItem(HOLIDAY_DATA_KEY);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.warn('读取节假日数据失败:', e);
+            return {};
         }
-        return null;
-    } catch (e) {
-        console.warn(`加载${year}年节假日数据失败:`, e);
-        return null;
     }
+    return {};
+}
+
+// 保存节假日数据到 localStorage
+function saveHolidayData(year, data) {
+    const allData = getAllHolidayData();
+    allData[year] = data;
+    localStorage.setItem(HOLIDAY_DATA_KEY, JSON.stringify(allData));
+}
+
+// 获取上次更新明年数据的时间
+function getLastUpdateTime() {
+    const time = localStorage.getItem(HOLIDAY_UPDATE_TIME_KEY);
+    return time ? parseInt(time) : null;
+}
+
+// 保存上次更新时间
+function saveUpdateTime() {
+    localStorage.setItem(HOLIDAY_UPDATE_TIME_KEY, Date.now().toString());
+}
+
+// 检查是否需要更新明年数据（超过5天）
+function needUpdateNextYear() {
+    const lastTime = getLastUpdateTime();
+    if (!lastTime) return true;
+    const daysSinceUpdate = (Date.now() - lastTime) / (1000 * 60 * 60 * 24);
+    return daysSinceUpdate >= 5;
 }
 
 // 从远程获取节假日数据
@@ -38,7 +59,10 @@ async function fetchHolidayData(year) {
     try {
         const response = await fetch(`https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`);
         if (response.ok) {
-            return await response.json();
+            const data = await response.json();
+            // 保存到 localStorage
+            saveHolidayData(year, data);
+            return data;
         }
         return null;
     } catch (e) {
@@ -47,74 +71,30 @@ async function fetchHolidayData(year) {
     }
 }
 
-// 保存节假日数据到 localStorage（用于缓存远程获取的数据）
-function saveHolidayCache() {
-    const cacheData = {
-        data: holidayCache.data,
-        lastUpdate: Date.now()
-    };
-    localStorage.setItem(HOLIDAY_CACHE_KEY, JSON.stringify(cacheData));
-}
-
-// 从 localStorage 加载缓存
-function loadHolidayCache() {
-    const saved = localStorage.getItem(HOLIDAY_CACHE_KEY);
-    if (saved) {
-        try {
-            const cacheData = JSON.parse(saved);
-            holidayCache.data = cacheData.data || {};
-            holidayCache.lastUpdate = cacheData.lastUpdate;
-        } catch (e) {
-            console.warn('加载节假日缓存失败:', e);
-        }
-    }
-}
-
-// 检查是否需要更新明年数据（超过5天）
-function needUpdateNextYear() {
-    if (!holidayCache.lastUpdate) return true;
-    const daysSinceUpdate = (Date.now() - holidayCache.lastUpdate) / (1000 * 60 * 60 * 24);
-    return daysSinceUpdate >= 5;
-}
-
 // 初始化节假日数据
 async function initHolidayData() {
     const currentYear = new Date().getFullYear();
     const nextYear = currentYear + 1;
+    const allData = getAllHolidayData();
 
-    // 加载 localStorage 缓存
-    loadHolidayCache();
-
-    // 加载当前年份本地数据（如果缓存中没有）
-    if (!holidayCache.data[currentYear]) {
-        const localData = await loadLocalHolidayData(currentYear);
-        if (localData) {
-            holidayCache.data[currentYear] = localData;
-        }
+    // 如果当前年份数据不存在，从远程获取
+    if (!allData[currentYear]) {
+        console.log(`获取${currentYear}年节假日数据...`);
+        await fetchHolidayData(currentYear);
     }
 
-    // 加载明年本地数据（如果缓存中没有）
-    if (!holidayCache.data[nextYear]) {
-        const localData = await loadLocalHolidayData(nextYear);
-        if (localData) {
-            holidayCache.data[nextYear] = localData;
-        }
-    }
-
-    // 检查是否需要从远程更新明年数据
+    // 检查是否需要更新明年数据（超过5天）
     if (needUpdateNextYear()) {
-        console.log('尝试从远程获取明年节假日数据...');
-        const remoteData = await fetchHolidayData(nextYear);
-        if (remoteData) {
-            holidayCache.data[nextYear] = remoteData;
-            holidayCache.lastUpdate = Date.now();
-            saveHolidayCache();
-            console.log('明年节假日数据已更新');
-        }
+        console.log('尝试获取明年节假日数据...');
+        await fetchHolidayData(nextYear);
+        saveUpdateTime();
     }
+}
 
-    // 保存缓存
-    saveHolidayCache();
+// 获取某年节假日数据（从 localStorage）
+function getHolidayYearData(year) {
+    const allData = getAllHolidayData();
+    return allData[year] || null;
 }
 
 // 检查某一天是否是休息日（节假日）
@@ -122,8 +102,8 @@ function isHolidayOffDay(date) {
     const year = date.getFullYear();
     const dateStr = formatDate(date);
 
-    const yearData = holidayCache.data[year];
-    if (!yearData || !yearData.days) return false;
+    const yearData = getHolidayYearData(year);
+    if (!yearData || !yearData.days) return null;
 
     const dayInfo = yearData.days.find(d => d.date === dateStr);
     // isOffDay=true 表示休息日（节假日），isOffDay=false 表示调休上班日
@@ -135,7 +115,7 @@ function isHolidayWorkDay(date) {
     const year = date.getFullYear();
     const dateStr = formatDate(date);
 
-    const yearData = holidayCache.data[year];
+    const yearData = getHolidayYearData(year);
     if (!yearData || !yearData.days) return false;
 
     const dayInfo = yearData.days.find(d => d.date === dateStr);

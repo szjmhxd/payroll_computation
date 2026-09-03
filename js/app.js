@@ -387,6 +387,9 @@ function saveSettings() {
         payDay: parseInt(elements.payDay.value) || 15
     };
     localStorage.setItem('touchFishPaySettings', JSON.stringify(settings));
+    
+    // 保存后立即更新显示
+    updateTodayDisplay();
     alert('设置已保存！');
 }
 
@@ -1098,10 +1101,7 @@ async function init() {
         elements.payDay
     ];
 
-    inputs.forEach(input => {
-        const eventType = input.type === 'checkbox' || input.type === 'number' ? 'change' : 'change';
-        input.addEventListener(eventType, updateTodayDisplay);
-    });
+    // 不再实时监听，点击保存时才更新
 
     // 启动自动更新
     startAutoUpdate();

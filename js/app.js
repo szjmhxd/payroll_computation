@@ -984,13 +984,37 @@ function setSpeedDisplay(coffeeWorkday, coffeeCalendar, lunchWorkday, lunchCalen
     elements.carCalendar.textContent = carCalendar;
 }
 
-// 启动定时更新
+// 启动自动更新（只更新时间显示，不更新薪资计算）
 function startAutoUpdate() {
-    // 立即更新一次
-    updateTodayDisplay();
+    // 每秒只更新时间相关显示（下班倒计时等）
+    updateTimer = setInterval(updateTimeOnly, 1000);
+}
 
-    // 每秒更新
-    updateTimer = setInterval(updateTodayDisplay, 1000);
+// 只更新时间显示（不重新计算薪资）
+function updateTimeOnly() {
+    const settings = getCurrentSettings();
+    
+    // 更新状态
+    updateStatus();
+    
+    // 更新下班倒计时
+    const now = new Date();
+    const endTime = parseTime(settings.workEndTime);
+    const endDateTime = new Date(now);
+    endDateTime.setHours(endTime.hours, endTime.minutes, 0, 0);
+    
+    // 如果已过下班时间，显示0
+    if (now >= endDateTime) {
+        elements.countdown.textContent = '00:00:00';
+        elements.progressPercent.textContent = '100.000%';
+        elements.progressBar.style.width = '100%';
+    } else {
+        const diff = endDateTime - now;
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        elements.countdown.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
 }
 
 // 停止定时更新

@@ -312,63 +312,9 @@ function minutesToTime(minutes) {
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
-// 午休时间三字段联动
+// 午休时间三字段联动（保存时才计算）
 function setupLunchTimeLinkage() {
-    let lastModified = null; // 记录最后修改的字段
-
-    // 午休开始时间变化 → 计算结束时间
-    elements.lunchStartTime.addEventListener('change', () => {
-        if (lastModified === 'duration') {
-            // 如果最后修改的是时长，则计算结束时间
-            const startMinutes = timeToMinutes(elements.lunchStartTime.value);
-            const duration = parseInt(elements.lunchDuration.value) || 0;
-            const endMinutes = startMinutes + duration;
-            if (endMinutes <= 24 * 60) {
-                elements.lunchEndTime.value = minutesToTime(endMinutes);
-            }
-        } else {
-            // 否则计算时长
-            calculateLunchDuration();
-        }
-        lastModified = 'start';
-    });
-
-    // 午休结束时间变化 → 计算时长
-    elements.lunchEndTime.addEventListener('change', () => {
-        if (lastModified === 'duration') {
-            // 如果最后修改的是时长，则计算开始时间
-            const endMinutes = timeToMinutes(elements.lunchEndTime.value);
-            const duration = parseInt(elements.lunchDuration.value) || 0;
-            const startMinutes = endMinutes - duration;
-            if (startMinutes >= 0) {
-                elements.lunchStartTime.value = minutesToTime(startMinutes);
-            }
-        } else {
-            // 否则计算时长
-            calculateLunchDuration();
-        }
-        lastModified = 'end';
-    });
-
-    // 午休时长变化 → 计算结束时间
-    elements.lunchDuration.addEventListener('input', () => {
-        const startMinutes = timeToMinutes(elements.lunchStartTime.value);
-        const duration = parseInt(elements.lunchDuration.value) || 0;
-        const endMinutes = startMinutes + duration;
-        if (endMinutes <= 24 * 60) {
-            elements.lunchEndTime.value = minutesToTime(endMinutes);
-        }
-        lastModified = 'duration';
-    });
-
-    function calculateLunchDuration() {
-        const startMinutes = timeToMinutes(elements.lunchStartTime.value);
-        const endMinutes = timeToMinutes(elements.lunchEndTime.value);
-        const duration = endMinutes - startMinutes;
-        if (duration >= 0) {
-            elements.lunchDuration.value = duration;
-        }
-    }
+    // 不再实时监听，点击保存时才计算联动
 }
 
 // 保存设置到 localStorage

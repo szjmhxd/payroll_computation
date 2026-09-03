@@ -871,16 +871,16 @@ function updateTodayDisplay() {
 }
 
 // 将秒数转换为大致日期（年月日分钟）
-// 按每天8小时、每月21.5天、每年258天计算
+// 使用用户实际工作时长计算
 // 最小单位是分钟，允许一位小数
-function formatWorkTime(totalSeconds) {
+function formatWorkTime(totalSeconds, dailyWorkMinutes) {
     if (totalSeconds <= 0) return '0分钟';
 
-    // 每天8小时，每月21.5天，每年258天
-    const dailyWorkHours = 8;
+    // 使用用户实际每天工作分钟数
+    const minutesPerDay = dailyWorkMinutes;
+    // 每月21.5天，每年258天
     const daysPerMonth = 21.5;
     const monthsPerYear = 12;
-    const minutesPerDay = dailyWorkHours * 60; // 480分钟
 
     // 转换为总工作分钟数
     const totalWorkMinutes = totalSeconds / 60;
@@ -936,6 +936,10 @@ function updateSpeedConversion(perSecond) {
         return;
     }
 
+    // 获取用户实际每天工作分钟数
+    const settings = getCurrentSettings();
+    const dailyWorkMinutes = getDailyWorkSeconds(settings) / 60;
+
     // 计算每件商品需要的工作时间（秒），使用高精度计算
     const coffeeSeconds = 9.9 / perSecond;
     const lunchSeconds = 15 / perSecond;
@@ -943,10 +947,10 @@ function updateSpeedConversion(perSecond) {
     const carSeconds = 299000 / perSecond;
 
     setSpeedDisplay(
-        formatWorkTime(coffeeSeconds),
-        formatWorkTime(lunchSeconds),
-        formatWorkTime(phoneSeconds),
-        formatWorkTime(carSeconds)
+        formatWorkTime(coffeeSeconds, dailyWorkMinutes),
+        formatWorkTime(lunchSeconds, dailyWorkMinutes),
+        formatWorkTime(phoneSeconds, dailyWorkMinutes),
+        formatWorkTime(carSeconds, dailyWorkMinutes)
     );
 }
 

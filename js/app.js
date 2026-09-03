@@ -1054,15 +1054,30 @@ function stopAutoUpdate() {
 
 // 初始化
 async function init() {
-    // 初始化日历数据（100年，同步）
+    console.log('=== 开始初始化 ===');
+    const totalStart = performance.now();
+
+    // 初始化日历数据
+    let start = performance.now();
     initCalendarData();
+    console.log(`日历数据初始化: ${(performance.now() - start).toFixed(2)}ms`);
 
     // 初始化节假日数据（异步）
+    start = performance.now();
     await initHolidayData();
+    console.log(`节假日数据初始化: ${(performance.now() - start).toFixed(2)}ms`);
 
+    start = performance.now();
     initTimePickers();
+    console.log(`时间选择器初始化: ${(performance.now() - start).toFixed(2)}ms`);
+
+    start = performance.now();
     setupLunchTimeLinkage();
+    console.log(`午休联动设置: ${(performance.now() - start).toFixed(2)}ms`);
+
+    start = performance.now();
     loadSettings();
+    console.log(`加载设置: ${(performance.now() - start).toFixed(2)}ms`);
 
     // 绑定按钮事件
     elements.saveBtn.addEventListener('click', saveSettings);
@@ -1101,6 +1116,8 @@ async function init() {
             }
         };
     });
+
+    console.log(`=== 初始化完成，总耗时: ${(performance.now() - totalStart).toFixed(2)}ms ===`);
 }
 
 // 页面加载完成后初始化

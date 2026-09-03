@@ -870,100 +870,83 @@ function updateTodayDisplay() {
     updateSpeedConversion(perSecond);
 }
 
-// 将秒数转换为两种格式：
-// 1. 精确时间（如：16.5分钟、3.5小时）
-// 2. 大致日期（如：3年6月19天，最多三个单位，最小单位是分钟）
-function formatWorkTime(totalSeconds, settings) {
-    if (totalSeconds <= 0) return { precise: '0分钟', approx: '0分钟' };
+// 将秒数转换为大致日期（年月日分钟）
+// 按每天8小时、每月21.5天、每年258天计算
+// 最小单位是分钟，允许一位小数
+function formatWorkTime(totalSeconds) {
+    if (totalSeconds <= 0) return '0分钟';
 
-    // 计算精确时间显示
-    let precise;
-    if (totalSeconds < 60) {
-        precise = `${Math.max(0.1, totalSeconds / 60).toFixed(1)}分钟`;
-    } else if (totalSeconds < 3600) {
-        const minutes = totalSeconds / 60;
-        precise = minutes < 10 ? `${minutes.toFixed(1)}分钟` : `${Math.round(minutes)}分钟`;
-    } else if (totalSeconds < 86400) {
-        const hours = totalSeconds / 3600;
-        precise = hours < 10 ? `${hours.toFixed(1)}小时` : `${Math.round(hours)}小时`;
-    } else {
-        const days = totalSeconds / 86400;
-        precise = `${days.toFixed(1)}天`;
-    }
-
-    // 计算大致日期（按每月21.5天，每天8小时）
-    // 固定使用 8小时/天 计算
+    // 每天8小时，每月21.5天，每年258天
     const dailyWorkHours = 8;
     const daysPerMonth = 21.5;
     const monthsPerYear = 12;
+    const minutesPerDay = dailyWorkHours * 60; // 480分钟
 
-    // 总共需要多少工作小时
-    const totalHours = totalSeconds / 3600;
-
-    // 总共需要多少工作分钟（保留用于计算）
-    const totalMinutes = totalSeconds / 60;
+    // 转换为总工作分钟数
+    const totalWorkMinutes = totalSeconds / 60;
 
     // 计算年
-    const hoursPerYear = dailyWorkHours * daysPerMonth * monthsPerYear; // 2064小时
-    const years = Math.floor(totalHours / hoursPerYear);
-    const remainingHoursAfterYears = totalHours - years * hoursPerYear;
+    const minutesPerYear = minutesPerDay * daysPerMonth * monthsPerYear;
+    const years = Math.floor(totalWorkMinutes / minutesPerYear);
+    const remainingAfterYears = totalWorkMinutes - years * minutesPerYear;
 
     // 计算月
-    const hoursPerMonth = dailyWorkHours * daysPerMonth; // 172小时
-    const months = Math.floor(remainingHoursAfterYears / hoursPerMonth);
-    const remainingHoursAfterMonths = remainingHoursAfterYears - months * hoursPerMonth;
+    const minutesPerMonth = minutesPerDay * daysPerMonth;
+    const months = Math.floor(remainingAfterYears / minutesPerMonth);
+    const remainingAfterMonths = remainingAfterYears - months * minutesPerMonth;
 
     // 计算天
-    const days = Math.floor(remainingHoursAfterMonths / dailyWorkHours);
-    const remainingHoursAfterDays = remainingHoursAfterMonths - days * dailyWorkHours;
+    const days = Math.floor(remainingAfterMonths / minutesPerDay);
+    const remainingAfterDays = remainingAfterMonths - days * minutesPerDay;
 
-    // 计算分钟
-    const minutes = Math.round(remainingHoursAfterDays * 60);
+    // 计算分钟（允许一位小数）
+    let minutes = remainingAfterDays;
+    if (minutes >= 1) {
+        minutes = Math.round(minutes * 10) / 10; // 保留一位小数
+    } else if (minutes > 0) {
+        minutes = Math.round(minutes * 10) / 10;
+        if (minutes < 0.1) minutes = 0.1;
+    }
 
     // 构建显示字符串，最多三个单位，最小单位是分钟
     let units = [];
     if (years > 0) units.push(`${years}年`);
     if (months > 0) units.push(`${months}月`);
     if (days > 0) units.push(`${days}天`);
-    if (minutes > 0 && units.length < 3) units.push(`${minutes}分钟`);
+    if (minutes > 0 && units.length < 3) {
+        // 如果分钟是整数就不显示小数点
+        const minStr = minutes % 1 === 0 ? Math.round(minutes) : minutes;
+        units.push(`${minStr}分钟`);
+    }
 
     // 如果什么都没有，显示分钟
     if (units.length === 0) {
-        const totalMin = Math.max(1, Math.round(totalMinutes));
+        const totalMin = Math.max(0.1, Math.round(totalWorkMinutes * 10) / 10);
         units.push(`${totalMin}分钟`);
     }
 
     // 最多取三个单位
-    const approx = units.slice(0, 3).join('');
-
-    return { precise, approx };
+    return units.slice(0, 3).join('');
 }
 
-// 更新赚钱速度换算
+// 更新赚钱速度换算（使用高精度每秒薪资计算）
 function updateSpeedConversion(perSecond) {
-    const settings = getCurrentSettings();
-
     if (perSecond <= 0) {
         setSpeedDisplay('--', '--', '--', '--');
         return;
     }
 
-    // 计算每件商品需要的工作时间（秒）
+    // 计算每件商品需要的工作时间（秒），使用高精度计算
     const coffeeSeconds = 9.9 / perSecond;
     const lunchSeconds = 15 / perSecond;
     const phoneSeconds = 6000 / perSecond;
     const carSeconds = 299000 / perSecond;
 
-    const coffee = formatWorkTime(coffeeSeconds, settings);
-    const lunch = formatWorkTime(lunchSeconds, settings);
-    const phone = formatWorkTime(phoneSeconds, settings);
-    const car = formatWorkTime(carSeconds, settings);
-
     setSpeedDisplay(
-        `${coffee.approx}`,
-        `${lunch.approx}`,
-        `${phone.approx}`,
-        `${car.approx}`
+        formatWorkTime(coffeeSeconds),
+        formatWorkTime(lunchSeconds),
+        formatWorkTime(phoneSeconds),
+        formatWorkTime(carSeconds)
     );
 }
 

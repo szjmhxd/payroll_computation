@@ -251,10 +251,14 @@ const elements = {
     monthWorkDay: document.getElementById('monthWorkDay'),
     monthWorkDayTotal: document.getElementById('monthWorkDayTotal'),
     // 赚钱速度换算
-    coffeeTime: document.getElementById('coffeeTime'),
-    lunchTime: document.getElementById('lunchTime'),
-    phoneTime: document.getElementById('phoneTime'),
-    carTime: document.getElementById('carTime')
+    coffeeWorkday: document.getElementById('coffeeWorkday'),
+    coffeeCalendar: document.getElementById('coffeeCalendar'),
+    lunchWorkday: document.getElementById('lunchWorkday'),
+    lunchCalendar: document.getElementById('lunchCalendar'),
+    phoneWorkday: document.getElementById('phoneWorkday'),
+    phoneCalendar: document.getElementById('phoneCalendar'),
+    carWorkday: document.getElementById('carWorkday'),
+    carCalendar: document.getElementById('carCalendar')
 };
 
 // 定时器ID
@@ -929,14 +933,70 @@ function formatWorkTime(totalSeconds, dailyWorkMinutes) {
     return units.slice(0, 3).join('');
 }
 
+// 计算自然日时间（包含周末和节假日）
+// 从今天开始，计算需要多少天才能赚到指定金额
+function formatCalendarTime(totalWorkSeconds, settings) {
+    if (totalWorkSeconds <= 0) return '0天';
+
+    const dailyWorkSeconds = getDailyWorkSeconds(settings);
+    const dailyWorkMinutes = dailyWorkSeconds / 60;
+
+    // 需要多少个工作日
+    const totalWorkMinutes = totalWorkSeconds / 60;
+    const workDaysNeeded = totalWorkMinutes / dailyWorkMinutes;
+
+    // 从今天开始，逐天累加直到达到需要的工作日数
+    const now = new Date();
+    let accumulatedWorkDays = 0;
+    let calendarDays = 0;
+    const maxDays = 365 * 50; // 最多计算50年
+
+    while (accumulatedWorkDays < workDaysNeeded && calendarDays < maxDays) {
+        const checkDate = new Date(now);
+        checkDate.setDate(checkDate.getDate() + calendarDays);
+
+        if (isWorkDayForDate(checkDate, settings)) {
+            accumulatedWorkDays++;
+        }
+
+        if (accumulatedWorkDays < workDaysNeeded) {
+            calendarDays++;
+        }
+    }
+
+    // 现在 calendarDays 是需要的自然日天数
+    // 转换为年月日格式
+    if (calendarDays < 1) {
+        return '今天';
+    }
+
+    const years = Math.floor(calendarDays / 365);
+    const remainingAfterYears = calendarDays % 365;
+    const months = Math.floor(remainingAfterYears / 30);
+    const days = remainingAfterYears % 30;
+
+    let units = [];
+    if (years > 0) units.push(`${years}年`);
+    if (months > 0) units.push(`${months}月`);
+    if (days > 0) units.push(`${days}天`);
+
+    // 如果什么都没有，显示天数
+    if (units.length === 0) {
+        return `${calendarDays}天`;
+    }
+
+    // 最多取三个单位
+    return units.slice(0, 3).join('');
+}
+
 // 更新赚钱速度换算（使用高精度每秒薪资计算）
 function updateSpeedConversion(perSecond) {
     if (perSecond <= 0) {
-        setSpeedDisplay('--', '--', '--', '--');
+        setSpeedDisplay('--', '--', '--', '--', '--', '--', '--', '--');
         return;
     }
 
-    // 获取用户实际每天工作分钟数
+    // 获取用户设置
     const settings = getCurrentSettings();
     const dailyWorkMinutes = getDailyWorkSeconds(settings) / 60;
 
@@ -947,19 +1007,32 @@ function updateSpeedConversion(perSecond) {
     const carSeconds = 299000 / perSecond;
 
     setSpeedDisplay(
+        // 咖啡：工作日和自然日
         formatWorkTime(coffeeSeconds, dailyWorkMinutes),
+        formatCalendarTime(coffeeSeconds, settings),
+        // 盒饭：工作日和自然日
         formatWorkTime(lunchSeconds, dailyWorkMinutes),
+        formatCalendarTime(lunchSeconds, settings),
+        // 手机：工作日和自然日
         formatWorkTime(phoneSeconds, dailyWorkMinutes),
-        formatWorkTime(carSeconds, dailyWorkMinutes)
+        formatCalendarTime(phoneSeconds, settings),
+        // 车子：工作日和自然日
+        formatWorkTime(carSeconds, dailyWorkMinutes),
+        formatCalendarTime(carSeconds, settings)
     );
 }
 
-// 设置速度显示（精确值和大致值）
-function setSpeedDisplay(coffeeApprox, lunchApprox, phoneApprox, carApprox) {
-    elements.coffeeTime.textContent = coffeeApprox;
-    elements.lunchTime.textContent = lunchApprox;
-    elements.phoneTime.textContent = phoneApprox;
-    elements.carTime.textContent = carApprox;
+// 设置赚钱速度显示（工作日和自然日）
+function setSpeedDisplay(coffeeWorkday, coffeeCalendar, lunchWorkday, lunchCalendar, 
+                         phoneWorkday, phoneCalendar, carWorkday, carCalendar) {
+    elements.coffeeWorkday.textContent = coffeeWorkday;
+    elements.coffeeCalendar.textContent = coffeeCalendar;
+    elements.lunchWorkday.textContent = lunchWorkday;
+    elements.lunchCalendar.textContent = lunchCalendar;
+    elements.phoneWorkday.textContent = phoneWorkday;
+    elements.phoneCalendar.textContent = phoneCalendar;
+    elements.carWorkday.textContent = carWorkday;
+    elements.carCalendar.textContent = carCalendar;
 }
 
 // 启动定时更新

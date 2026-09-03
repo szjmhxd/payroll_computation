@@ -805,24 +805,58 @@ function updateTodayDisplay() {
     updateSpeedConversion(perSecond);
 }
 
-// 格式化秒数为 时:分:秒
-function formatSeconds(seconds) {
-    if (seconds <= 0) return '00:00:00';
+// 将秒数转换为工作日时间（年月日时）
+// 按每月21.5个工作日计算
+function formatWorkTime(totalSeconds, settings) {
+    if (totalSeconds <= 0) return '0时';
 
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
+    // 计算每天工作时长（秒）
+    const dailyWorkSeconds = getDailyWorkSeconds(settings);
+    if (dailyWorkSeconds <= 0) return '0时';
 
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    // 计算需要多少个工作日
+    const totalWorkDays = totalSeconds / dailyWorkSeconds;
+
+    // 每月21.5个工作日
+    const daysPerMonth = 21.5;
+    // 每年12个月
+    const monthsPerYear = 12;
+
+    // 计算年
+    const years = Math.floor(totalWorkDays / (daysPerMonth * monthsPerYear));
+    const remainingDaysAfterYears = totalWorkDays - years * daysPerMonth * monthsPerYear;
+
+    // 计算月
+    const months = Math.floor(remainingDaysAfterYears / daysPerMonth);
+    const remainingDaysAfterMonths = remainingDaysAfterYears - months * daysPerMonth;
+
+    // 计算天（保留小数）
+    const days = remainingDaysAfterMonths;
+
+    // 构建显示字符串
+    let result = '';
+    if (years > 0) result += `${years}年`;
+    if (months > 0) result += `${months}月`;
+    if (days >= 1) {
+        result += `${Math.floor(days)}天`;
+    } else if (days > 0) {
+        // 不足1天，转换为小时
+        const hours = days * 24;
+        result += `${Math.floor(hours)}时`;
+    }
+
+    return result || '0时';
 }
 
 // 更新赚钱速度换算
 function updateSpeedConversion(perSecond) {
+    const settings = getCurrentSettings();
+
     if (perSecond <= 0) {
-        elements.coffeeTime.textContent = '--:--:--';
-        elements.lunchTime.textContent = '--:--:--';
-        elements.phoneTime.textContent = '--:--:--';
-        elements.carTime.textContent = '--:--:--';
+        elements.coffeeTime.textContent = '--';
+        elements.lunchTime.textContent = '--';
+        elements.phoneTime.textContent = '--';
+        elements.carTime.textContent = '--';
         return;
     }
 
@@ -832,10 +866,10 @@ function updateSpeedConversion(perSecond) {
     const phoneSeconds = 6000 / perSecond;
     const carSeconds = 299000 / perSecond;
 
-    elements.coffeeTime.textContent = formatSeconds(coffeeSeconds);
-    elements.lunchTime.textContent = formatSeconds(lunchSeconds);
-    elements.phoneTime.textContent = formatSeconds(phoneSeconds);
-    elements.carTime.textContent = formatSeconds(carSeconds);
+    elements.coffeeTime.textContent = formatWorkTime(coffeeSeconds, settings);
+    elements.lunchTime.textContent = formatWorkTime(lunchSeconds, settings);
+    elements.phoneTime.textContent = formatWorkTime(phoneSeconds, settings);
+    elements.carTime.textContent = formatWorkTime(carSeconds, settings);
 }
 
 // 启动定时更新

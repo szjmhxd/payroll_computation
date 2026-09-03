@@ -22,11 +22,11 @@ function generateYearCalendar(year) {
     return { year, days };
 }
 
-// 生成100年日历数据并存储到 localStorage
+// 生成日历数据并存储到 localStorage（只生成10年）
 function generateAndSaveCalendarData() {
     const currentYear = new Date().getFullYear();
     const startYear = currentYear;
-    const endYear = currentYear + 99; // 100年
+    const endYear = currentYear + 9; // 10年
 
     console.log(`生成 ${startYear}-${endYear} 年日历数据...`);
 
@@ -80,8 +80,8 @@ function needInitCalendar() {
     try {
         const { start, end } = JSON.parse(saved);
         const currentYear = new Date().getFullYear();
-        // 检查是否覆盖当前年份到未来100年
-        return start > currentYear || end < currentYear + 99;
+        // 检查是否覆盖当前年份到未来10年
+        return start > currentYear || end < currentYear + 9;
     } catch (e) {
         return true;
     }

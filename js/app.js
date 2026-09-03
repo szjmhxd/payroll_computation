@@ -240,8 +240,9 @@ const elements = {
     statusBadge: document.getElementById('statusBadge'),
     monthEarned: document.getElementById('monthEarned'),
     hourlyRate: document.getElementById('hourlyRate'),
-    perSecond: document.getElementById('perSecond'),
+    perMinute: document.getElementById('perMinute'),
     paydayCountdown: document.getElementById('paydayCountdown'),
+    paydayHint: document.getElementById('paydayHint'),
     // 日期信息
     dateText: document.getElementById('dateText'),
     yearWorkDay: document.getElementById('yearWorkDay'),
@@ -646,8 +647,8 @@ function getCountdown(settings) {
     return { hours, minutes, seconds, total: remainingSeconds };
 }
 
-// 计算距离发薪日的天数
-function getPaydayCountdown(payDay) {
+// 计算发薪日信息（天数 + 周几提示）
+function getPaydayInfo(payDay) {
     const now = new Date();
     const currentDay = now.getDate();
     const currentMonth = now.getMonth();
@@ -655,41 +656,61 @@ function getPaydayCountdown(payDay) {
 
     // 本月发薪日
     let paydayDate = new Date(currentYear, currentMonth, payDay);
+    let isThisMonth = true;
 
     // 如果本月发薪日已过，计算下个月的
     if (currentDay >= payDay) {
         paydayDate = new Date(currentYear, currentMonth + 1, payDay);
+        isThisMonth = false;
     }
 
     // 计算天数差
     const diffTime = paydayDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return diffDays;
+    // 获取发薪日是周几
+    const weekday = getWeekdayFromDate(paydayDate);
+    const weekdayStr = weekdayNames[weekday];
+    const monthStr = isThisMonth ? '本月' : '下月';
+
+    // 构建提示信息
+    let hint = `${monthStr}发薪日：${paydayDate.getMonth() + 1}月${paydayDate.getDate()}日 ${weekdayStr}`;
+
+    // 如果是周末或调休，额外提示
+    if (weekday === 0 || weekday === 6) {
+        // 检查是否是调休上班日
+        if (isHolidayWorkDay(paydayDate)) {
+            hint += '（调休上班，正常发薪）';
+        } else {
+            hint += '（周末，可能顺延）';
+        }
+    }
+
+    return { days: diffDays, hint };
 }
 
-// 计算今日进度百分比
+// 计算今日进度百分比（精确到秒）
 function getTodayProgress(settings) {
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const workStartMinutes = timeToMinutes(settings.workStartTime);
-    const workEndMinutes = timeToMinutes(settings.workEndTime);
+    const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const workStartSeconds = timeToMinutes(settings.workStartTime) * 60;
+    const workEndSeconds = timeToMinutes(settings.workEndTime) * 60;
 
     // 如果还没到上班时间
-    if (currentMinutes < workStartMinutes) {
+    if (currentSeconds < workStartSeconds) {
         return 0;
     }
 
     // 如果已经下班
-    if (currentMinutes >= workEndMinutes) {
+    if (currentSeconds >= workEndSeconds) {
         return 100;
     }
 
-    // 计算进度
-    const totalWorkMinutes = workEndMinutes - workStartMinutes;
-    const workedMinutes = currentMinutes - workStartMinutes;
+    // 计算进度（精确到秒）
+    const totalWorkSeconds = workEndSeconds - workStartSeconds;
+    const workedSeconds = currentSeconds - workStartSeconds;
 
-    return Math.min(100, Math.round((workedMinutes / totalWorkMinutes) * 100));
+    return Math.min(100, (workedSeconds / totalWorkSeconds) * 100);
 }
 
 // 计算本月已赚薪资
@@ -764,14 +785,16 @@ function updateTodayDisplay() {
     // 更新统计卡片
     const monthlyEarned = getMonthEarned(settings);
     const hourlySalary = perSecond * 3600;
+    const perMinuteSalary = perSecond * 60;
 
     elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(2)}`;
     elements.hourlyRate.textContent = `¥${hourlySalary.toFixed(2)}/h`;
-    elements.perSecond.textContent = `¥${perSecond.toFixed(4)}`;
+    elements.perMinute.textContent = `¥${perMinuteSalary.toFixed(2)}`;
 
-    // 更新发薪日倒计时
-    const paydayDays = getPaydayCountdown(settings.payDay);
-    elements.paydayCountdown.textContent = `${paydayDays} 天`;
+    // 更新发薪日倒计时和提示
+    const paydayInfo = getPaydayInfo(settings.payDay);
+    elements.paydayCountdown.textContent = `${paydayInfo.days} 天`;
+    elements.paydayHint.textContent = paydayInfo.hint;
 }
 
 // 启动定时更新

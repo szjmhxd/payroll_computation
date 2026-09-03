@@ -1,6 +1,100 @@
 // 摸鱼薪资计算器 - 主逻辑
 
-// ============ 节假日数据管理 ============
+// ============ 日历数据管理（100年） ============
+
+// localStorage 键名
+const CALENDAR_DATA_KEY = 'touchFishCalendarData';
+const CALENDAR_YEARS_KEY = 'touchFishCalendarYears'; // 记录存储的年份范围
+
+// 生成单年的日历数据（每天是星期几）
+function generateYearCalendar(year) {
+    const days = [];
+    const startDate = new Date(year, 0, 1); // 1月1日
+    const endDate = new Date(year, 11, 31); // 12月31日
+
+    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        days.push({
+            date: formatDate(new Date(date)),
+            weekday: date.getDay() // 0=周日, 1=周一, ..., 6=周六
+        });
+    }
+
+    return { year, days };
+}
+
+// 生成100年日历数据并存储到 localStorage
+function generateAndSaveCalendarData() {
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear;
+    const endYear = currentYear + 99; // 100年
+
+    console.log(`生成 ${startYear}-${endYear} 年日历数据...`);
+
+    const allCalendar = {};
+    for (let year = startYear; year <= endYear; year++) {
+        allCalendar[year] = generateYearCalendar(year);
+    }
+
+    // 存储日历数据
+    localStorage.setItem(CALENDAR_DATA_KEY, JSON.stringify(allCalendar));
+    // 存储年份范围
+    localStorage.setItem(CALENDAR_YEARS_KEY, JSON.stringify({ start: startYear, end: endYear }));
+
+    console.log('日历数据生成完成');
+}
+
+// 从 localStorage 获取日历数据
+function getCalendarData() {
+    const saved = localStorage.getItem(CALENDAR_DATA_KEY);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.warn('读取日历数据失败:', e);
+            return null;
+        }
+    }
+    return null;
+}
+
+// 获取某天是星期几（从本地日历数据）
+function getWeekdayFromDate(date) {
+    const calendar = getCalendarData();
+    if (!calendar) return date.getDay(); // 如果没有缓存，直接计算
+
+    const year = date.getFullYear();
+    const dateStr = formatDate(date);
+
+    const yearData = calendar[year];
+    if (!yearData || !yearData.days) return date.getDay();
+
+    const dayInfo = yearData.days.find(d => d.date === dateStr);
+    return dayInfo ? dayInfo.weekday : date.getDay();
+}
+
+// 检查日历数据是否需要初始化（不存在或年份范围不对）
+function needInitCalendar() {
+    const saved = localStorage.getItem(CALENDAR_YEARS_KEY);
+    if (!saved) return true;
+
+    try {
+        const { start, end } = JSON.parse(saved);
+        const currentYear = new Date().getFullYear();
+        // 检查是否覆盖当前年份到未来100年
+        return start > currentYear || end < currentYear + 99;
+    } catch (e) {
+        return true;
+    }
+}
+
+// 初始化日历数据
+function initCalendarData() {
+    if (needInitCalendar()) {
+        generateAndSaveCalendarData();
+    }
+}
+
+// ============ 节假日数据管理（调休） ============
 
 // localStorage 键名
 const HOLIDAY_DATA_KEY = 'touchFishHolidayData';
@@ -411,7 +505,7 @@ function getTodayWorkedSeconds(settings) {
 // 判断是否是工作日
 function isWorkDay(settings) {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0=周日, 6=周六
+    const dayOfWeek = getWeekdayFromDate(now); // 从本地日历获取星期几
 
     // 检查是否是调休上班日（周末但需要上班）
     const holidayWorkDay = isHolidayWorkDay(now);
@@ -514,7 +608,7 @@ function getMonthPassedWorkDays(settings) {
     // 遍历本月1号到昨天
     for (let day = 1; day < currentDay; day++) {
         const date = new Date(now.getFullYear(), now.getMonth(), day);
-        const weekDay = date.getDay();
+        const weekDay = getWeekdayFromDate(date); // 从本地日历获取星期几
 
         // 检查是否是调休上班日（周末但需要上班）
         const holidayWorkDay = isHolidayWorkDay(date);
@@ -631,6 +725,9 @@ function stopAutoUpdate() {
 
 // 初始化
 async function init() {
+    // 初始化日历数据（100年，同步）
+    initCalendarData();
+
     // 初始化节假日数据（异步）
     await initHolidayData();
 

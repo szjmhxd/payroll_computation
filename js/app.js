@@ -501,11 +501,10 @@ function getMonthTotalWorkDays(settings) {
     return workDays;
 }
 
-// 计算两个日期之间的工作日天数（不包括起始日，包括结束日）
+// 计算两个日期之间的工作日天数（包括起始日和结束日）
 function getWorkDaysBetween(startDate, endDate, settings) {
     let workDays = 0;
     const current = new Date(startDate);
-    current.setDate(current.getDate() + 1); // 从下一天开始
 
     while (current <= endDate) {
         if (isWorkDayForDate(current, settings)) {

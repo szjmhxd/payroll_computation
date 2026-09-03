@@ -246,7 +246,12 @@ const elements = {
     // 日期信息
     dateText: document.getElementById('dateText'),
     yearWorkDay: document.getElementById('yearWorkDay'),
-    monthWorkDay: document.getElementById('monthWorkDay')
+    monthWorkDay: document.getElementById('monthWorkDay'),
+    // 赚钱速度换算
+    coffeeTime: document.getElementById('coffeeTime'),
+    lunchTime: document.getElementById('lunchTime'),
+    phoneTime: document.getElementById('phoneTime'),
+    carTime: document.getElementById('carTime')
 };
 
 // 定时器ID
@@ -795,6 +800,42 @@ function updateTodayDisplay() {
     const paydayInfo = getPaydayInfo(settings.payDay);
     elements.paydayCountdown.textContent = `${paydayInfo.days} 天`;
     elements.paydayHint.textContent = paydayInfo.hint;
+
+    // 更新赚钱速度换算
+    updateSpeedConversion(perSecond);
+}
+
+// 格式化秒数为 时:分:秒
+function formatSeconds(seconds) {
+    if (seconds <= 0) return '00:00:00';
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// 更新赚钱速度换算
+function updateSpeedConversion(perSecond) {
+    if (perSecond <= 0) {
+        elements.coffeeTime.textContent = '--:--:--';
+        elements.lunchTime.textContent = '--:--:--';
+        elements.phoneTime.textContent = '--:--:--';
+        elements.carTime.textContent = '--:--:--';
+        return;
+    }
+
+    // 计算每件商品需要的工作时间（秒）
+    const coffeeSeconds = 9.9 / perSecond;
+    const lunchSeconds = 15 / perSecond;
+    const phoneSeconds = 6000 / perSecond;
+    const carSeconds = 299000 / perSecond;
+
+    elements.coffeeTime.textContent = formatSeconds(coffeeSeconds);
+    elements.lunchTime.textContent = formatSeconds(lunchSeconds);
+    elements.phoneTime.textContent = formatSeconds(phoneSeconds);
+    elements.carTime.textContent = formatSeconds(carSeconds);
 }
 
 // 启动定时更新

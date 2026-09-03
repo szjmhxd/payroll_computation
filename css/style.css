@@ -201,6 +201,55 @@ body {
     border-color: var(--primary-color);
 }
 
+/* 赚钱速度换算 */
+.speed-card h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.speed-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.speed-item {
+    text-align: center;
+    padding: 16px 12px;
+    background: linear-gradient(135deg, var(--primary-light) 0%, #f0fdf4 100%);
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+
+.speed-item:hover {
+    transform: translateY(-2px);
+}
+
+.speed-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.speed-name {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.speed-price {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.speed-time {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
 /* 数字输入框加减按钮样式 */
 input[type="number"] {
     -moz-appearance: textfield;
@@ -351,6 +400,10 @@ input[type="number"]::-webkit-outer-spin-button {
 /* 响应式布局 */
 @media (max-width: 768px) {
     .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .speed-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 

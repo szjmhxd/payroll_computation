@@ -227,8 +227,24 @@ body {
 }
 
 .speed-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 32px;
-    margin-bottom: 8px;
+}
+
+.speed-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* 隐藏加载失败的图片 */
+.speed-icon img.load-failed {
+    display: none;
 }
 
 .speed-name {

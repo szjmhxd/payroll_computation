@@ -1090,6 +1090,17 @@ async function init() {
 
     // 启动自动更新
     startAutoUpdate();
+
+    // 处理图标加载失败，显示备用emoji
+    document.querySelectorAll('.speed-icon img').forEach(img => {
+        img.onerror = function() {
+            this.classList.add('load-failed');
+            const fallback = this.parentElement.getAttribute('data-fallback');
+            if (fallback) {
+                this.parentElement.innerHTML = fallback;
+            }
+        };
+    });
 }
 
 // 页面加载完成后初始化

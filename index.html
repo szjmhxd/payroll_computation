@@ -19,9 +19,17 @@
 
         <!-- 今日薪资显示区域 -->
         <section class="today-salary card">
+            <!-- 日期信息 -->
+            <div class="date-info">
+                <span id="dateText">2026年09月02日 星期三</span>
+                <span class="date-separator">|</span>
+                <span>今年第 <span id="yearWorkDay">0</span> 个工作日</span>
+                <span class="date-separator">|</span>
+                <span>本月第 <span id="monthWorkDay">0</span> 个工作日</span>
+            </div>
             <div class="status-badge" id="statusBadge">  摸鱼中</div>
-            <div class="today-label">今日已赚</div>
-            <div class="today-amount" id="todayAmount">¥0.00</div>
+            <div class="today-label">今日已赚 / 每日薪资</div>
+            <div class="today-amount" id="todayAmount">¥0.00 / ¥0.00</div>
             <div class="progress-container">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
@@ -37,11 +45,6 @@
                 <div class="stat-icon"> </div>
                 <div class="stat-label">本月已赚</div>
                 <div class="stat-value" id="monthEarned">¥0.00</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"> </div>
-                <div class="stat-label">每日薪资</div>
-                <div class="stat-value" id="dailySalary">¥0.00</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">⏱️</div>

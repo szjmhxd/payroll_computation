@@ -239,10 +239,13 @@ const elements = {
     countdown: document.getElementById('countdown'),
     statusBadge: document.getElementById('statusBadge'),
     monthEarned: document.getElementById('monthEarned'),
-    dailySalary: document.getElementById('dailySalary'),
     hourlyRate: document.getElementById('hourlyRate'),
     perSecond: document.getElementById('perSecond'),
-    paydayCountdown: document.getElementById('paydayCountdown')
+    paydayCountdown: document.getElementById('paydayCountdown'),
+    // 日期信息
+    dateText: document.getElementById('dateText'),
+    yearWorkDay: document.getElementById('yearWorkDay'),
+    monthWorkDay: document.getElementById('monthWorkDay')
 };
 
 // 定时器ID
@@ -435,6 +438,96 @@ function getCurrentSettings() {
     };
 }
 
+// 星期几的中文名称
+const weekdayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+// 获取今天的日期信息
+function getTodayDateInfo() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const weekday = getWeekdayFromDate(now);
+
+    return {
+        text: `${year}年${month}月${day}日 ${weekdayNames[weekday]}`,
+        weekday: weekday
+    };
+}
+
+// 计算今年已过的工作日天数（不包括今天）
+function getYearPassedWorkDays(settings) {
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentDay = now.getDate();
+
+    let workDays = 0;
+
+    // 遍历今年1月到当前月的前一天
+    for (let month = 0; month < currentMonth; month++) {
+        const daysInMonth = new Date(now.getFullYear(), month + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(now.getFullYear(), month, day);
+            if (isWorkDayForDate(date, settings)) {
+                workDays++;
+            }
+        }
+    }
+
+    // 遍历当前月1号到昨天
+    for (let day = 1; day < currentDay; day++) {
+        const date = new Date(now.getFullYear(), now.getMonth(), day);
+        if (isWorkDayForDate(date, settings)) {
+            workDays++;
+        }
+    }
+
+    return workDays;
+}
+
+// 计算本月已过的工作日天数（不包括今天）
+function getMonthPassedWorkDays(settings) {
+    const now = new Date();
+    const currentDay = now.getDate();
+
+    let workDays = 0;
+
+    // 遍历本月1号到昨天
+    for (let day = 1; day < currentDay; day++) {
+        const date = new Date(now.getFullYear(), now.getMonth(), day);
+        if (isWorkDayForDate(date, settings)) {
+            workDays++;
+        }
+    }
+
+    return workDays;
+}
+
+// 判断指定日期是否是工作日
+function isWorkDayForDate(date, settings) {
+    const dayOfWeek = getWeekdayFromDate(date);
+
+    // 检查是否是调休上班日（周末但需要上班）
+    if (isHolidayWorkDay(date)) {
+        return true;
+    }
+
+    // 检查是否是节假日休息日
+    const holidayOff = isHolidayOffDay(date);
+    if (holidayOff === true && settings.skipHoliday) {
+        return false;
+    }
+
+    // 检查是否是周末
+    if (settings.skipWeekend) {
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 // 计算月工作日天数
 function getMonthWorkDays(isDoubleRest) {
     // 简化计算：双休约21.75天，单休约25.75天
@@ -599,44 +692,6 @@ function getTodayProgress(settings) {
     return Math.min(100, Math.round((workedMinutes / totalWorkMinutes) * 100));
 }
 
-// 计算本月已过的工作日天数（不包括今天）
-function getMonthPassedWorkDays(settings) {
-    const now = new Date();
-    const currentDay = now.getDate(); // 今天几号
-
-    let workDays = 0;
-
-    // 遍历本月1号到昨天
-    for (let day = 1; day < currentDay; day++) {
-        const date = new Date(now.getFullYear(), now.getMonth(), day);
-        const weekDay = getWeekdayFromDate(date); // 从本地日历获取星期几
-
-        // 检查是否是调休上班日（周末但需要上班）
-        const holidayWorkDay = isHolidayWorkDay(date);
-        if (holidayWorkDay) {
-            workDays++;
-            continue;
-        }
-
-        // 检查是否是节假日休息日
-        const holidayOff = isHolidayOffDay(date);
-        if (holidayOff === true && settings.skipHoliday) {
-            continue;
-        }
-
-        // 如果跳过周末
-        if (settings.skipWeekend) {
-            if (weekDay === 0 || weekDay === 6) {
-                continue;
-            }
-        }
-
-        workDays++;
-    }
-
-    return workDays;
-}
-
 // 计算本月已赚薪资
 function getMonthEarned(settings) {
     const perSecond = getPerSecondSalary(settings);
@@ -660,10 +715,20 @@ function updateTodayDisplay() {
     const settings = getCurrentSettings();
     const isWork = isWorkDay(settings);
 
+    // 更新日期信息
+    const dateInfo = getTodayDateInfo();
+    elements.dateText.textContent = dateInfo.text;
+
+    // 计算工作日（包括今天）
+    const yearWorkDays = getYearPassedWorkDays(settings) + (isWork ? 1 : 0);
+    const monthWorkDays = getMonthPassedWorkDays(settings) + (isWork ? 1 : 0);
+    elements.yearWorkDay.textContent = yearWorkDays;
+    elements.monthWorkDay.textContent = monthWorkDays;
+
     // 如果不是工作日，显示休息状态
     if (!isWork) {
         elements.statusBadge.textContent = '  休息日';
-        elements.todayAmount.textContent = '¥0.00';
+        elements.todayAmount.textContent = '¥0.00 / ¥0.00';
         elements.progressBar.style.width = '0%';
         elements.progressPercent.textContent = '0%';
         elements.countdown.textContent = '休息日';
@@ -676,9 +741,11 @@ function updateTodayDisplay() {
     const perSecond = getPerSecondSalary(settings);
     const workedSeconds = getTodayWorkedSeconds(settings);
     const todayEarned = perSecond * workedSeconds;
+    const dailyWorkSeconds = getDailyWorkSeconds(settings);
+    const dailySalary = perSecond * dailyWorkSeconds;
 
-    // 更新今日已赚金额
-    elements.todayAmount.textContent = `¥${todayEarned.toFixed(2)}`;
+    // 更新今日已赚金额（已赚/每日薪资）
+    elements.todayAmount.textContent = `¥${todayEarned.toFixed(2)} / ¥${dailySalary.toFixed(2)}`;
 
     // 更新进度条（三位小数）
     const progress = getTodayProgress(settings);
@@ -696,12 +763,9 @@ function updateTodayDisplay() {
 
     // 更新统计卡片
     const monthlyEarned = getMonthEarned(settings);
-    const dailyWorkSeconds = getDailyWorkSeconds(settings);
-    const dailySalary = perSecond * dailyWorkSeconds;
     const hourlySalary = perSecond * 3600;
 
     elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(2)}`;
-    elements.dailySalary.textContent = `¥${dailySalary.toFixed(2)}`;
     elements.hourlyRate.textContent = `¥${hourlySalary.toFixed(2)}/h`;
     elements.perSecond.textContent = `¥${perSecond.toFixed(4)}`;
 

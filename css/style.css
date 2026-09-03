@@ -64,6 +64,18 @@ body {
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--card-bg) 100%);
 }
 
+/* 日期信息 */
+.date-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.date-separator {
+    margin: 0 8px;
+    color: var(--border-color);
+}
+
 .status-badge {
     display: inline-block;
     background: var(--primary-color);
@@ -81,7 +93,7 @@ body {
 }
 
 .today-amount {
-    font-size: 48px;
+    font-size: 36px;
     font-weight: bold;
     color: var(--primary-color);
     margin-bottom: 20px;
@@ -113,7 +125,7 @@ body {
 /* 统计卡片网格 */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-bottom: 20px;
 }

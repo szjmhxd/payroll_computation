@@ -805,47 +805,73 @@ function updateTodayDisplay() {
     updateSpeedConversion(perSecond);
 }
 
-// 将秒数转换为工作日时间（年月日时）
-// 按每月21.5个工作日计算
+// 将秒数转换为两种格式：
+// 1. 精确时间（如：16.5分钟、3.5小时）
+// 2. 大致日期（如：3年6月19天，最多三个单位，最小单位是分钟）
 function formatWorkTime(totalSeconds, settings) {
-    if (totalSeconds <= 0) return '0时';
+    if (totalSeconds <= 0) return { precise: '0分钟', approx: '0分钟' };
 
-    // 计算每天工作时长（秒）
-    const dailyWorkSeconds = getDailyWorkSeconds(settings);
-    if (dailyWorkSeconds <= 0) return '0时';
-
-    // 计算需要多少个工作日
-    const totalWorkDays = totalSeconds / dailyWorkSeconds;
-
-    // 每月21.5个工作日
-    const daysPerMonth = 21.5;
-    // 每年12个月
-    const monthsPerYear = 12;
-
-    // 计算年
-    const years = Math.floor(totalWorkDays / (daysPerMonth * monthsPerYear));
-    const remainingDaysAfterYears = totalWorkDays - years * daysPerMonth * monthsPerYear;
-
-    // 计算月
-    const months = Math.floor(remainingDaysAfterYears / daysPerMonth);
-    const remainingDaysAfterMonths = remainingDaysAfterYears - months * daysPerMonth;
-
-    // 计算天（保留小数）
-    const days = remainingDaysAfterMonths;
-
-    // 构建显示字符串
-    let result = '';
-    if (years > 0) result += `${years}年`;
-    if (months > 0) result += `${months}月`;
-    if (days >= 1) {
-        result += `${Math.floor(days)}天`;
-    } else if (days > 0) {
-        // 不足1天，转换为小时
-        const hours = days * 24;
-        result += `${Math.floor(hours)}时`;
+    // 计算精确时间显示
+    let precise;
+    if (totalSeconds < 60) {
+        precise = `${Math.max(0.1, totalSeconds / 60).toFixed(1)}分钟`;
+    } else if (totalSeconds < 3600) {
+        const minutes = totalSeconds / 60;
+        precise = minutes < 10 ? `${minutes.toFixed(1)}分钟` : `${Math.round(minutes)}分钟`;
+    } else if (totalSeconds < 86400) {
+        const hours = totalSeconds / 3600;
+        precise = hours < 10 ? `${hours.toFixed(1)}小时` : `${Math.round(hours)}小时`;
+    } else {
+        const days = totalSeconds / 86400;
+        precise = `${days.toFixed(1)}天`;
     }
 
-    return result || '0时';
+    // 计算大致日期（按每月21.5天，每天8小时）
+    // 固定使用 8小时/天 计算
+    const dailyWorkHours = 8;
+    const daysPerMonth = 21.5;
+    const monthsPerYear = 12;
+
+    // 总共需要多少工作小时
+    const totalHours = totalSeconds / 3600;
+
+    // 总共需要多少工作分钟（保留用于计算）
+    const totalMinutes = totalSeconds / 60;
+
+    // 计算年
+    const hoursPerYear = dailyWorkHours * daysPerMonth * monthsPerYear; // 2064小时
+    const years = Math.floor(totalHours / hoursPerYear);
+    const remainingHoursAfterYears = totalHours - years * hoursPerYear;
+
+    // 计算月
+    const hoursPerMonth = dailyWorkHours * daysPerMonth; // 172小时
+    const months = Math.floor(remainingHoursAfterYears / hoursPerMonth);
+    const remainingHoursAfterMonths = remainingHoursAfterYears - months * hoursPerMonth;
+
+    // 计算天
+    const days = Math.floor(remainingHoursAfterMonths / dailyWorkHours);
+    const remainingHoursAfterDays = remainingHoursAfterMonths - days * dailyWorkHours;
+
+    // 计算分钟
+    const minutes = Math.round(remainingHoursAfterDays * 60);
+
+    // 构建显示字符串，最多三个单位，最小单位是分钟
+    let units = [];
+    if (years > 0) units.push(`${years}年`);
+    if (months > 0) units.push(`${months}月`);
+    if (days > 0) units.push(`${days}天`);
+    if (minutes > 0 && units.length < 3) units.push(`${minutes}分钟`);
+
+    // 如果什么都没有，显示分钟
+    if (units.length === 0) {
+        const totalMin = Math.max(1, Math.round(totalMinutes));
+        units.push(`${totalMin}分钟`);
+    }
+
+    // 最多取三个单位
+    const approx = units.slice(0, 3).join('');
+
+    return { precise, approx };
 }
 
 // 更新赚钱速度换算
@@ -853,10 +879,7 @@ function updateSpeedConversion(perSecond) {
     const settings = getCurrentSettings();
 
     if (perSecond <= 0) {
-        elements.coffeeTime.textContent = '--';
-        elements.lunchTime.textContent = '--';
-        elements.phoneTime.textContent = '--';
-        elements.carTime.textContent = '--';
+        setSpeedDisplay('--', '--', '--', '--');
         return;
     }
 
@@ -866,10 +889,25 @@ function updateSpeedConversion(perSecond) {
     const phoneSeconds = 6000 / perSecond;
     const carSeconds = 299000 / perSecond;
 
-    elements.coffeeTime.textContent = formatWorkTime(coffeeSeconds, settings);
-    elements.lunchTime.textContent = formatWorkTime(lunchSeconds, settings);
-    elements.phoneTime.textContent = formatWorkTime(phoneSeconds, settings);
-    elements.carTime.textContent = formatWorkTime(carSeconds, settings);
+    const coffee = formatWorkTime(coffeeSeconds, settings);
+    const lunch = formatWorkTime(lunchSeconds, settings);
+    const phone = formatWorkTime(phoneSeconds, settings);
+    const car = formatWorkTime(carSeconds, settings);
+
+    setSpeedDisplay(
+        `${coffee.approx}`,
+        `${lunch.approx}`,
+        `${phone.approx}`,
+        `${car.approx}`
+    );
+}
+
+// 设置速度显示（精确值和大致值）
+function setSpeedDisplay(coffeeApprox, lunchApprox, phoneApprox, carApprox) {
+    elements.coffeeTime.textContent = coffeeApprox;
+    elements.lunchTime.textContent = lunchApprox;
+    elements.phoneTime.textContent = phoneApprox;
+    elements.carTime.textContent = carApprox;
 }
 
 // 启动定时更新

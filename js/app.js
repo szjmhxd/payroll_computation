@@ -258,7 +258,13 @@ const elements = {
     phoneWorkday: document.getElementById('phoneWorkday'),
     phoneCalendar: document.getElementById('phoneCalendar'),
     carWorkday: document.getElementById('carWorkday'),
-    carCalendar: document.getElementById('carCalendar')
+    carCalendar: document.getElementById('carCalendar'),
+    // 下班/休息日展示
+    todayWorking: document.getElementById('todayWorking'),
+    todayDone: document.getElementById('todayDone'),
+    todayOff: document.getElementById('todayOff'),
+    doneAmount: document.getElementById('doneAmount'),
+    offAmount: document.getElementById('offAmount')
 };
 
 // 定时器ID
@@ -763,22 +769,61 @@ function updateTodayDisplay() {
     elements.monthWorkDay.textContent = monthWorkDays;
     elements.monthWorkDayTotal.textContent = monthWorkDaysTotal;
 
-    // 如果不是工作日，显示休息状态
+    // 判断当前是否已过下班时间（仅在工作日有效）
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const workEndMinutes = timeToMinutes(settings.workEndTime);
+    const isPastWork = isWork && currentMinutes >= workEndMinutes;
+
+    // 切换三套展示区块的显示/隐藏
+    elements.todayWorking.style.display = (!isWork || isPastWork) ? 'none' : '';
+    elements.todayDone.style.display = isPastWork ? '' : 'none';
+    elements.todayOff.style.display = !isWork && !isPastWork ? '' : 'none';
+
+    // —— 休息日 ——
     if (!isWork) {
         elements.statusBadge.textContent = '  休息日';
-        elements.todayAmount.textContent = '¥0.00 / ¥0.00';
-        elements.progressBar.style.width = '0%';
-        elements.progressPercent.textContent = '0%';
         elements.countdown.textContent = '休息日';
+        elements.offAmount.textContent = '¥0.00'; // 休息日无进账
+        // 统计卡片仍显示本月已赚等数据
+        const perSecond = getPerSecondSalary(settings);
+        elements.monthEarned.textContent = `¥${getMonthEarned(settings).toFixed(2)}`;
+        elements.hourlyRate.textContent = `¥${(perSecond * 3600).toFixed(2)}/h`;
+        elements.perMinute.textContent = `¥${(perSecond * 60).toFixed(2)}`;
+        const paydayInfo = getPaydayInfo(settings.payDay);
+        elements.paydayCountdown.textContent = `${paydayInfo.days} 自然日`;
+        elements.paydayWorkdays.textContent = `${paydayInfo.workDays} 工作日`;
+        elements.paydayHint.textContent = paydayInfo.hint;
+        updateSpeedConversion();
         return;
     }
 
-    elements.statusBadge.textContent = '  搬砖中';
-
-    // 计算今日已赚
+    // —— 下班后（工作日但已过下班时间）——
     const perSecond = getPerSecondSalary(settings);
     const workedSeconds = getTodayWorkedSeconds(settings);
     const todayEarned = perSecond * workedSeconds;
+
+    if (isPastWork) {
+        elements.statusBadge.textContent = '  今日搬砖结束';
+        elements.doneAmount.textContent = `¥${todayEarned.toFixed(2)}`;
+        // 统计卡片仍正常更新
+        const dailyWorkSeconds = getDailyWorkSeconds(settings);
+        const dailySalary = perSecond * dailyWorkSeconds;
+        const monthlyEarned = getMonthEarned(settings);
+        elements.monthEarned.textContent = `¥${monthlyEarned.toFixed(2)}`;
+        elements.hourlyRate.textContent = `¥${(perSecond * 3600).toFixed(2)}/h`;
+        elements.perMinute.textContent = `¥${(perSecond * 60).toFixed(2)}`;
+        const paydayInfo = getPaydayInfo(settings.payDay);
+        elements.paydayCountdown.textContent = `${paydayInfo.days} 自然日`;
+        elements.paydayWorkdays.textContent = `${paydayInfo.workDays} 工作日`;
+        elements.paydayHint.textContent = paydayInfo.hint;
+        updateSpeedConversion();
+        return;
+    }
+
+    // —— 工作中 ——
+    elements.statusBadge.textContent = '  搬砖中';
+
     const dailyWorkSeconds = getDailyWorkSeconds(settings);
     const dailySalary = perSecond * dailyWorkSeconds;
 

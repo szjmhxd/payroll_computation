@@ -122,6 +122,28 @@ body {
     color: var(--text-secondary);
 }
 
+/* 下班后展示 */
+.today-done,
+.today-off {
+    padding: 16px 0 8px;
+    text-align: center;
+}
+
+.done-title,
+.off-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.done-amount,
+.off-amount {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
 /* 统计卡片网格 */
 .stats-grid {
     display: grid;

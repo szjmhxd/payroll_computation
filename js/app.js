@@ -877,8 +877,12 @@ function formatNaturalDay(amount, settings) {
     const dailySalary = settings.monthlySalary / monthWorkDays;
     if (dailySalary <= 0) return '0天';
 
-    // 一天内即可赚到 -> 今天
-    if (amount <= dailySalary) return '今天';
+    // 金额不足一天薪资：当天即可赚到，按实际工作时长展示（不足1小时只显示分钟，超过1小时显示 时+分）
+    // 与工作日耗时口径一致，直接复用 formatWorkTime（此区间只会产生 时/分，不会出现 天/月/年）
+    if (amount < dailySalary) {
+        const dailyWorkMinutes = getDailyWorkSeconds(settings) / 60;
+        return formatWorkTime(amount, dailySalary, dailyWorkMinutes, monthWorkDays);
+    }
 
     const monthlySalary = settings.monthlySalary;
     const yearlySalary = monthlySalary * 12;
@@ -1088,7 +1092,8 @@ document.addEventListener('DOMContentLoaded', init);
  *         再依次拆成 年 -> 月 -> 日 -> 时 -> 分（最小单位，1位小数）。
  *
  * 二、自然日耗时（单位：日/时/分 共三个，含周末与节假日，按真实日历推算）
- *   1) 金额 <= dailySalary                     -> 「今天」
+ *   1) 金额 < dailySalary -> 当天即可赚到，按工作时长展示（不足1小时只显示分钟，
+ *      超过1小时显示 时+分），口径与工作日耗时一致
  *   2) 否则先按「整年/整月」拆分：
  *        years  = 金额 / (月薪*12) 取整
  *        months = 剩余 / 月薪       取整

@@ -302,7 +302,8 @@ function initTimePickers() {
                     var settings = getCurrentSettings();
                     settings[id] = value;
                     localStorage.setItem('touchFishSettings', JSON.stringify(settings));
-                    updateAllDisplays();
+                    updateTodayDisplay();
+                    updateSpeedConversion();
                 }
             });
         });

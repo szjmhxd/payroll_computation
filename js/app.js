@@ -823,21 +823,37 @@ function updateTodayDisplay() {
 // 只有最小单位允许出现小数，且最多保留一位小数（四舍五入）
 
 // —— 工作日耗时 ——
-// 最大单位是「天」，只允许 天/时/分 三个单位来展示
-// amount: 商品金额；dailySalary: 每日薪资；dailyWorkMinutes: 每日工作分钟数
-function formatWorkTime(amount, dailySalary, dailyWorkMinutes) {
-    if (amount <= 0 || dailySalary <= 0 || dailyWorkMinutes <= 0) return '0分钟';
+// 单位：年/月/日/时/分 共五个，最多显示 3 个（不足则少显示）
+// 只有最小单位允许含小数，且最多保留一位小数（四舍五入）
+// amount: 商品金额；dailySalary: 每日薪资；dailyWorkMinutes: 每日工作分钟数；monthWorkDays: 月工作天数
+function formatWorkTime(amount, dailySalary, dailyWorkMinutes, monthWorkDays) {
+    if (amount <= 0 || dailySalary <= 0 || dailyWorkMinutes <= 0 || monthWorkDays <= 0) return '0分钟';
 
     const perMinute = dailySalary / dailyWorkMinutes; // 每分钟薪资
     const totalMinutes = amount / perMinute;          // 需要工作的总分钟数
 
-    const days = Math.floor(totalMinutes / dailyWorkMinutes);
-    const remAfterDays = totalMinutes - days * dailyWorkMinutes;
-    const hours = Math.floor(remAfterDays / 60);
-    let minutes = (remAfterDays - hours * 60);
+    const dayMinutes = dailyWorkMinutes;              // 每日工作分钟数
+    const monthMinutes = monthWorkDays * dayMinutes;  // 每月工作分钟数
+    const yearMinutes = monthMinutes * 12;            // 每年工作分钟数
+
+    // 依次拆出 年 -> 月 -> 日 -> 时 -> 分
+    let rem = totalMinutes;
+    const years = Math.floor(rem / yearMinutes);
+    rem -= years * yearMinutes;
+
+    const months = Math.floor(rem / monthMinutes);
+    rem -= months * monthMinutes;
+
+    const days = Math.floor(rem / dayMinutes);
+    rem -= days * dayMinutes;
+
+    const hours = Math.floor(rem / 60);
+    let minutes = rem - hours * 60;
     minutes = Math.round(minutes * 10) / 10; // 最小单位保留一位小数
 
     const parts = [];
+    if (years > 0) parts.push(`${years}年`);
+    if (months > 0) parts.push(`${months}月`);
     if (days > 0) parts.push(`${days}天`);
     if (hours > 0) parts.push(`${hours}小时`);
     if (minutes >= 0.1) parts.push(`${minutes % 1 === 0 ? Math.round(minutes) : minutes}分钟`);
@@ -849,9 +865,11 @@ function formatWorkTime(amount, dailySalary, dailyWorkMinutes) {
 }
 
 // —— 自然日耗时 ——
-// 包含周末与节假日，按实际日历天数计算
-// 金额先按「整年 / 整月」薪资拆分，剩余部分再从参考日期开始向后数工作日，
-// 最后换算成 年/月/天 的自然日跨度。
+// 单位：日/时/分 三个，最多显示 3 个（不足则少显示）
+// 只有最小单位允许含小数，且最多保留一位小数（四舍五入）
+// 按真实日历（含周末与节假日）推算：金额先按整年 / 整月薪资扣除，
+// 剩余部分换算成需要的工作日数（可含小数），从参考日期起逐自然日累积，
+// 最后一个不足一天的部分工作日，换算成 时 / 分。
 function formatNaturalDay(amount, settings) {
     if (amount <= 0) return '今天';
 
@@ -875,15 +893,16 @@ function formatNaturalDay(amount, settings) {
     rem = rem - months * monthlySalary;
     if (months > 0) refDate.setMonth(refDate.getMonth() + months);
 
-    // 剩余金额需要的工作日数（可能含小数，小数部分表示最后一个工作日做一部分）
+    // 剩余金额需要的工作日数（整数部分 = 完整工作日，小数部分 = 最后一个工作日只做一部分）
     const workDaysNeeded = rem / dailySalary;
+    const fullWorkDays = Math.floor(workDaysNeeded);
+    const partialFraction = workDaysNeeded - fullWorkDays;
 
-    // 从参考日期开始，逐自然日判断是否工作日并累计，直到积满所需工作日数，
-    // 这样最后一个「部分工作日」也计一个自然日，从而得到完成日期。
+    // 从参考日期开始，逐自然日判断是否工作日并累计，积满整数个完整工作日
     let accumulated = 0;
     let calendarDays = 0;
     const maxDays = 365 * 30 + 1;
-    while (accumulated < workDaysNeeded && calendarDays < maxDays) {
+    while (accumulated < fullWorkDays && calendarDays < maxDays) {
         const checkDate = new Date(refDate);
         checkDate.setDate(checkDate.getDate() + calendarDays);
         if (isWorkDayForDate(checkDate, settings)) {
@@ -892,34 +911,30 @@ function formatNaturalDay(amount, settings) {
         calendarDays++;
     }
 
+    // 目标自然日 = 参考日期 + 经过的日历天数（即完成工作所需的那一天）
     const targetDate = new Date(refDate);
     targetDate.setDate(targetDate.getDate() + calendarDays);
 
-    return formatDateSpan(new Date(), targetDate);
-}
+    // 从今天（零点）到目标日（零点）的自然日跨度
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetMidnight = new Date(targetDate);
+    targetMidnight.setHours(0, 0, 0, 0);
+    const totalDays = Math.round((targetMidnight - today) / (1000 * 60 * 60 * 24));
 
-// 计算两个日期之间的 年/月/天 跨度，最多显示两个单位外的第三个
-function formatDateSpan(from, to) {
-    if (to <= from) return '今天';
+    if (totalDays <= 0) return '今天';
 
-    let years = to.getFullYear() - from.getFullYear();
-    let months = to.getMonth() - from.getMonth();
-    let days = to.getDate() - from.getDate();
-
-    if (days < 0) {
-        months--;
-        const prevMonthDays = new Date(to.getFullYear(), to.getMonth(), 0).getDate();
-        days += prevMonthDays;
-    }
-    if (months < 0) {
-        years--;
-        months += 12;
-    }
+    // 最后一个部分工作日不足一天的工作时长（分钟）
+    const dailyWorkMinutes = getDailyWorkSeconds(settings) / 60;
+    const partialMinutes = partialFraction * dailyWorkMinutes;
+    const hours = Math.floor(partialMinutes / 60);
+    let minutes = partialMinutes - hours * 60;
+    minutes = Math.round(minutes * 10) / 10; // 最小单位保留一位小数
 
     const parts = [];
-    if (years > 0) parts.push(`${years}年`);
-    if (months > 0) parts.push(`${months}月`);
-    if (days > 0) parts.push(`${days}天`);
+    if (totalDays > 0) parts.push(`${totalDays}天`);
+    if (hours > 0) parts.push(`${hours}小时`);
+    if (minutes >= 0.1) parts.push(`${minutes % 1 === 0 ? Math.round(minutes) : minutes}分钟`);
     if (parts.length === 0) return '今天';
     return parts.slice(0, 3).join('');
 }
@@ -939,16 +954,16 @@ function updateSpeedConversion() {
 
     setSpeedDisplay(
         // 咖啡：工作日耗时 和 自然日耗时
-        formatWorkTime(9.9, dailySalary, dailyWorkMinutes),
+        formatWorkTime(9.9, dailySalary, dailyWorkMinutes, monthWorkDays),
         formatNaturalDay(9.9, settings),
         // 盒饭：工作日耗时 和 自然日耗时
-        formatWorkTime(15, dailySalary, dailyWorkMinutes),
+        formatWorkTime(15, dailySalary, dailyWorkMinutes, monthWorkDays),
         formatNaturalDay(15, settings),
         // 手机：工作日耗时 和 自然日耗时
-        formatWorkTime(6000, dailySalary, dailyWorkMinutes),
+        formatWorkTime(6000, dailySalary, dailyWorkMinutes, monthWorkDays),
         formatNaturalDay(6000, settings),
         // 车子：工作日耗时 和 自然日耗时
-        formatWorkTime(299000, dailySalary, dailyWorkMinutes),
+        formatWorkTime(299000, dailySalary, dailyWorkMinutes, monthWorkDays),
         formatNaturalDay(299000, settings)
     );
 }
@@ -1051,16 +1066,16 @@ document.addEventListener('DOMContentLoaded', init);
 /* ============================================================
  * 赚钱速度换算算法说明
  * ------------------------------------------------------------
- * 一、基本概念
+ * 基本概念
  *   - dailySalary  = 月薪 / 月工作日数           （每日薪资）
  *   - perMinute    = dailySalary / 每日工作分钟   （每分钟薪资）
  *   - monthWorkDays：双休按 21.75 天，单休按 25.75 天（简化近似）
  *
- * 二、单位
- *   - 共 年/月/日/时/分 五个单位，最多显示 3 个（不足则少显示）
+ * 单位规则（两个时间类型均适用）
+ *   - 最多显示 3 个单位（不足则少显示）
  *   - 只有最小单位允许含小数，且最多保留一位小数（四舍五入）
  *
- * 三、工作日耗时（最大单位是「天」，只显示 天/时/分）
+ * 一、工作日耗时（单位：年/月/日/时/分 共五个）
  *   例：月薪 7000，双休（21.75 天），每日工作 9:00-18:00 且午休计入薪资
  *       dailySalary = 7000 / 21.75 ≈ 321.84
  *       perMinute   = 321.84 / 540  ≈ 0.596
@@ -1070,9 +1085,9 @@ document.addEventListener('DOMContentLoaded', init);
  *       18 天整 = 18 * 321.84 = 5793.12，剩余 206.88
  *       206.88 / 35.76(每小时) = 5.785 小时      -> 18天5小时47.1分钟
  *   思路：先算总工作分钟数 = 金额 / perMinute，
- *         再拆成 天(=总分钟/每日分钟) -> 小时 -> 分钟(最小单位，1位小数)。
+ *         再依次拆成 年 -> 月 -> 日 -> 时 -> 分（最小单位，1位小数）。
  *
- * 四、自然日耗时（含周末与节假日，按真实日历推算）
+ * 二、自然日耗时（单位：日/时/分 共三个，含周末与节假日，按真实日历推算）
  *   1) 金额 <= dailySalary                     -> 「今天」
  *   2) 否则先按「整年/整月」拆分：
  *        years  = 金额 / (月薪*12) 取整
@@ -1083,7 +1098,8 @@ document.addEventListener('DOMContentLoaded', init);
  *   3) 剩余金额所需工作日数 = 剩余 / dailySalary（可含小数）
  *      从参考日期起逐自然日判断是否工作日并累计，累计到 >= 所需数，
  *      最后一个「部分工作日」也占一个自然日，得到完成日期。
- *   4) 计算「今天 -> 完成日期」的年/月/天跨度，例如 2月3天 / 3年7月4天。
+ *   4) 计算「今天 -> 完成日期」的自然日跨度，再拆成 天 -> 时 -> 分（最小单位，1位小数）。
+ *      最后一个不足一天的部分工作日，换算成 时 / 分。
  *   例：商品 6000，需 18.64 个工作日，从今天往后数第 19 个工作日
  *       对应的自然日约为 26 天 -> 26天
  * ============================================================ */

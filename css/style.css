@@ -291,6 +291,51 @@ body {
     content: '  ';
 }
 
+/* 算法说明 */
+.algorithm-note h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.algorithm-block {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: var(--primary-light);
+    border-radius: 10px;
+}
+
+.algorithm-block:last-child {
+    margin-bottom: 0;
+}
+
+.algorithm-block h3 {
+    font-size: 15px;
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+}
+
+.algorithm-block ul {
+    list-style: none;
+    padding: 0;
+}
+
+.algorithm-block li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    padding-left: 14px;
+    position: relative;
+}
+
+.algorithm-block li::before {
+    content: '·';
+    position: absolute;
+    left: 2px;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
 /* 数字输入框加减按钮样式 */
 input[type="number"] {
     -moz-appearance: textfield;

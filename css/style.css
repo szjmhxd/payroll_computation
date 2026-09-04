@@ -311,8 +311,21 @@ body {
 }
 
 .speed-workday::before {
-    content: '⏱ ';
-    font-size: 11px;
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+    vertical-align: -2px;
+    background-color: var(--primary-color);
+    -webkit-mask-image: url('../icons/stopwatch.svg');
+    mask-image: url('../icons/stopwatch.svg');
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
 }
 
 .speed-calendar {
@@ -515,6 +528,13 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .btn-secondary:hover {
     background: #d1d5db;
+}
+
+.btn-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: -3px;
+    margin-right: 4px;
 }
 
 /* 致谢页脚 */

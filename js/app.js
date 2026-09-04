@@ -285,22 +285,26 @@ const defaultSettings = {
     payDay: 15
 };
 
-// 初始化时钟时间选择器（Web Component）
-// clock-timepicker 自动处理时钟界面，此处仅监听 change 事件同步到 localStorage
+// 初始化 Layui laydate 时间选择器
+// laydate 支持移动端滚轮选择，UI 更美观
 function initTimePickers() {
-    const timeIds = ['workStartTime', 'workEndTime', 'lunchStartTime', 'lunchEndTime'];
-    timeIds.forEach(id => {
-        const el = elements[id];
-        if (!el) return;
-        // 监听用户选择时间后的 change 事件
-        el.addEventListener('change', () => {
-            const val = el.value;
-            if (val && val.match(/^\d{2}:\d{2}$/)) {
-                const settings = getCurrentSettings();
-                settings[id] = val;
-                localStorage.setItem('touchFishSettings', JSON.stringify(settings));
-                updateAllDisplays();
-            }
+    layui.use('laydate', function () {
+        var laydate = layui.laydate;
+        var timeIds = ['workStartTime', 'workEndTime', 'lunchStartTime', 'lunchEndTime'];
+
+        timeIds.forEach(function (id) {
+            laydate.render({
+                elem: '#' + id,         // 绑定输入框
+                type: 'time',           // 仅时间选择（时:分）
+                format: 'HH:mm',       // 24小时制 格式
+                done: function (value) {
+                    // 用户选择时间后同步到 localStorage
+                    var settings = getCurrentSettings();
+                    settings[id] = value;
+                    localStorage.setItem('touchFishSettings', JSON.stringify(settings));
+                    updateAllDisplays();
+                }
+            });
         });
     });
 }

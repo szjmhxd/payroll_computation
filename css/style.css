@@ -594,26 +594,12 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 }
 
-/* 时钟时间选择器适配 */
-clock-timepicker {
-    display: block;
-    width: 100%;
-}
-
-clock-timepicker input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background-color: #fff;
-    font-size: 14px;
-    color: var(--text-primary);
+/* 时间选择器输入框样式 */
+.time-input {
     cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
+    background-color: #fff;
 }
 
-clock-timepicker input:focus {
+.time-input:focus {
     border-color: var(--primary-color);
 }

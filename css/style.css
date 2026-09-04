@@ -135,6 +135,16 @@ body {
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.done-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
 }
 
 .done-amount,

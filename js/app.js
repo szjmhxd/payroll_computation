@@ -285,24 +285,24 @@ const defaultSettings = {
     payDay: 15
 };
 
-// 初始化 Flatpickr 时间选择器
+// 初始化时钟时间选择器（Web Component）
+// clock-timepicker 自动处理时钟界面，此处仅监听 change 事件同步到 localStorage
 function initTimePickers() {
-    const timeOptions = {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: 'H:i',
-        time_24hr: true,
-        minuteIncrement: 5,
-        locale: 'zh',
-        defaultHour: 9,
-        defaultMinute: 0
-    };
-
-    // 初始化所有时间选择器
-    flatpickr('#workStartTime', { ...timeOptions, defaultHour: 9, defaultMinute: 0 });
-    flatpickr('#workEndTime', { ...timeOptions, defaultHour: 18, defaultMinute: 0 });
-    flatpickr('#lunchStartTime', { ...timeOptions, defaultHour: 12, defaultMinute: 0 });
-    flatpickr('#lunchEndTime', { ...timeOptions, defaultHour: 13, defaultMinute: 0 });
+    const timeIds = ['workStartTime', 'workEndTime', 'lunchStartTime', 'lunchEndTime'];
+    timeIds.forEach(id => {
+        const el = elements[id];
+        if (!el) return;
+        // 监听用户选择时间后的 change 事件
+        el.addEventListener('change', () => {
+            const val = el.value;
+            if (val && val.match(/^\d{2}:\d{2}$/)) {
+                const settings = getCurrentSettings();
+                settings[id] = val;
+                localStorage.setItem('touchFishSettings', JSON.stringify(settings));
+                updateAllDisplays();
+            }
+        });
+    });
 }
 
 // 将时间字符串转换为分钟数

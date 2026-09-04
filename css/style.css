@@ -574,27 +574,26 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 }
 
-/* Flatpickr 自定义样式 */
-.flatpickr-calendar {
-    border-radius: 12px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+/* 时钟时间选择器适配 */
+clock-timepicker {
+    display: block;
+    width: 100%;
 }
 
-.flatpickr-time {
-    border-radius: 0 0 12px 12px !important;
-}
-
-.flatpickr-current-month input.flatpickr-monthDropdown-months,
-.flatpickr-current-month .flatpickr-monthDropdown-months {
-    font-weight: 500;
-}
-
-/* 时间选择器输入框样式 */
-.timepicker {
-    cursor: pointer;
+clock-timepicker input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     background-color: #fff;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
 }
 
-.timepicker:focus {
-    cursor: default;
+clock-timepicker input:focus {
+    border-color: var(--primary-color);
 }

@@ -142,8 +142,8 @@ body {
 }
 
 .done-icon {
-    width: 32px;
-    height: 32px;
+    width: 56px;
+    height: 56px;
     flex-shrink: 0;
 }
 
@@ -303,20 +303,22 @@ body {
 }
 
 .speed-workday {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--primary-color);
     margin-bottom: 4px;
+    white-space: nowrap;
 }
 
 .speed-workday::before {
     content: '⏱ ';
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .speed-calendar {
     font-size: 12px;
     color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 .speed-calendar::before {

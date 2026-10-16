@@ -10,6 +10,9 @@ bin-release/
 # IDE 配置
 .trae/
 
+# 本地记忆库（勿提交/勿删除）
+.dsh-meow/
+
 # Executables
 *.swf
 *.air
